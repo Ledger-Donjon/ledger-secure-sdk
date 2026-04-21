@@ -21,3 +21,6 @@ build
 fuzzing/build/
 fuzzing/out/
 fuzzing/mock/generated/
+.fuzz-artifacts/
+*.profraw
+*.profdata
