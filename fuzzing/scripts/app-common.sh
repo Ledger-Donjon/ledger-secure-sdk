@@ -49,10 +49,16 @@ pick_default_build_jobs() {
 }
 
 pick_default_workers() {
+  # Default campaign profile: at most two workers (friendly for laptops/CI).
+  # Override with WORKERS=N, or raise the cap with FUZZ_DEFAULT_WORKERS=N.
+  local cap="${FUZZ_DEFAULT_WORKERS:-2}"
   local cpus
   cpus=$(nproc 2>/dev/null || echo 1)
-  if (( cpus > 4 )); then cpus=4; fi
-  echo "${cpus}"
+  if (( cpus < cap )); then
+    echo "${cpus}"
+  else
+    echo "${cap}"
+  fi
 }
 
 find_absolution_cmake_dir() {

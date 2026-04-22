@@ -64,6 +64,11 @@ BOLOS_SDK=/path/to/ledger-secure-sdk \
   --app-dir /path/to/app my-campaign
 ```
 
+- **`my-campaign`** is the run name (optional). It becomes the directory name
+  under `.fuzz-artifacts/`. If you omit it, the script uses a UTC timestamp.
+- Prefer **`--app-dir /absolute/path`** (or **`export APP_DIR=...`**) so the
+  script does not depend on the current working directory.
+
 Fuzz the SDK's own targets (10 built-in fuzzers under `sdk-fuzz/`):
 
 ```bash
@@ -82,16 +87,22 @@ Each run writes artefacts to `<app-dir>/.fuzz-artifacts/<campaign-name>/`:
 Crashes, if any, appear as `crash-*` files under the worker directories and
 are summarised at the end of the run.
 
-Common environment variables:
+Common environment variables (defaults favour quick local sanity runs; raise
+times and `WORKERS` for overnight or farm jobs):
 
-| Variable     | Default | Meaning                                 |
-|--------------|---------|-----------------------------------------|
-| `WARMUP_SEC` | 120     | Warmup phase duration per worker        |
-| `MAIN_SEC`   | 900     | Main phase duration per worker          |
-| `WORKERS`    | `nproc` | Parallel LibFuzzer workers              |
-| `OVERWRITE`  | unset   | Reuse an existing campaign directory    |
+| Variable         | Default              | Meaning |
+|------------------|----------------------|---------|
+| `WARMUP_SEC`     | `30`                 | Per-worker warmup duration (seconds). Explores from the bootstrap corpus. |
+| `MAIN_SEC`       | `60`                 | Per-worker main phase (seconds). Mutates from the merged warmup corpus. |
+| `WORKERS`        | `min(2, nproc)`      | Parallel LibFuzzer processes. Use `1` to minimise CPU; increase for throughput. Cap is `FUZZ_DEFAULT_WORKERS` (default `2`). |
+| `EXTRA_CORPUS`   | unset                | Colon-separated list of **extra corpus directories** merged into bootstrap (after seeds). Each tree may carry a `.compat-key`; it must match the current build or the script aborts. Use this to chain campaigns (e.g. prior run’s `targets/<fuzzer>/corpus`). |
+| `BASE_CORPUS_DIR`| app’s `fuzzing/base-corpus` if present | Promoted on-disk seeds. Set to empty (`BASE_CORPUS_DIR=`) to skip when the directory is incompatible with the current `compat-key`. |
+| `BUILD_JOBS`     | CPU-based            | Parallel compile jobs during `cmake --build`. Lower to reduce peak CPU. |
+| `OVERWRITE`      | unset                | Set to `1` to replace an existing `.fuzz-artifacts/<run-name>/` directory. |
+| `APP_TARGET`     | `flex`               | BOLOS target passed to CMake (`flex`, `stax`, …). |
 
-Full flag reference: see [docs/APP_CONTRACT.md](docs/APP_CONTRACT.md).
+Full CLI flags, Absolution resolution, and compatibility keys:
+[docs/APP_CONTRACT.md](docs/APP_CONTRACT.md).
 
 ## Prerequisites
 

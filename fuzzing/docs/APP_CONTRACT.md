@@ -387,14 +387,19 @@ key changes.
 
 ## What `app-campaign.sh` expects
 
-Invoke the campaign from the SDK. The campaign name is optional (defaults to
-a UTC timestamp):
+Invoke the campaign from the SDK. The **campaign name** is the last
+positional argument (optional). It becomes the directory name under
+`<app>/.fuzz-artifacts/<name>/`. If you omit it, the script uses a UTC
+timestamp (`campaign-…`).
 
 ```bash
 BOLOS_SDK=/path/to/ledger-secure-sdk \
   "$BOLOS_SDK"/fuzzing/scripts/app-campaign.sh \
   --app-dir /path/to/app my-campaign
 ```
+
+Use an absolute `--app-dir` (or `export APP_DIR=…`) so behaviour does not depend
+on the shell’s current working directory.
 
 ### CLI flags
 
@@ -410,13 +415,25 @@ BOLOS_SDK=/path/to/ledger-secure-sdk \
 
 | Variable               | Default | Meaning                                             |
 |------------------------|---------|-----------------------------------------------------|
-| `WARMUP_SEC`           | 120     | Warmup phase duration per worker                    |
-| `MAIN_SEC`             | 900     | Main phase duration per worker                      |
-| `WORKERS`              | `nproc` | Parallel LibFuzzer workers                          |
-| `OVERWRITE`            | unset   | Reuse an existing campaign directory                |
+| `WARMUP_SEC`           | `30`    | Warmup duration **per worker** (seconds). Wide exploration from bootstrap seeds. |
+| `MAIN_SEC`             | `60`    | Main phase **per worker** (seconds). Deeper mutations from merged warmup corpus. |
+| `WORKERS`              | `min(2, nproc)` | LibFuzzer processes in parallel. Default caps at two for lighter local/CI use; set `WORKERS=8` (etc.) for long runs. On machines with one CPU, only one worker is started. Override the cap with `FUZZ_DEFAULT_WORKERS` (used only when `WORKERS` is unset). |
+| `EXTRA_CORPUS`         | unset   | **Colon-separated** list of corpus directories copied into the bootstrap corpus after generated seeds. Use to feed a **prior merged corpus** (e.g. `.fuzz-artifacts/old-run/targets/fuzz_globals/corpus`). If a directory contains `.compat-key`, it must match the current build; otherwise the script errors (prevents corrupt state / wrong prefix size). |
+| `BASE_CORPUS_DIR`      | `<app>/fuzzing/base-corpus` if that path exists | Additional promoted seeds (same compat-key rules when `.compat-key` is present). Set to empty to skip, e.g. when the checked-in corpus is stale: `BASE_CORPUS_DIR=`. |
+| `BUILD_JOBS`           | derived from CPU count | Parallel `cmake --build` jobs. Lower to reduce compile CPU spikes. |
+| `APP_TARGET`           | `flex`  | Device target for CMake (`flex`, `stax`, …).        |
+| `OVERWRITE`            | unset   | Set to `1` to replace an existing `.fuzz-artifacts/<run>/` tree. |
 | `SKIP_INVARIANT_SYNC`  | unset   | Skip `sync-invariant.py` (keep hand-tuned `.zon`)   |
 | `ABSOLUTION_DIR`       | unset   | Absolution install prefix (first lookup)            |
-| `EXTRA_CORPUS`         | unset   | Colon-separated list of extra corpus directories    |
+| `BOLOS_SDK`            | parent of `fuzzing/` when unset | Must point at this SDK checkout for paths and CMake. |
+| `ARTIFACTS_ROOT`       | `<app>/.fuzz-artifacts` | Root directory for campaign output.          |
+| `BUILD_DIR_FAST` / `BUILD_DIR_COV` | `<app>/build/fast` and `build/cov` | Sanitizer fuzz binary vs coverage replay binary. |
+
+**Why tune these:** short defaults (`30`/`60` s, two workers) keep the first
+successful run fast. For meaningful coverage growth or regression hunting,
+increase `WARMUP_SEC`, `MAIN_SEC`, and `WORKERS` (e.g. `WARMUP_SEC=300
+MAIN_SEC=3300 WORKERS=4`). To cap machine load without editing the script,
+use `WORKERS=1` and/or lower `BUILD_JOBS`.
 
 ### Absolution resolution
 

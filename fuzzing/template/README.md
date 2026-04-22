@@ -18,7 +18,22 @@ Copy this directory to `<APP_SRC>/fuzzing/`, then compare each file with
 
 ```bash
 BOLOS_SDK=/path/to/ledger-secure-sdk \
-$BOLOS_SDK/fuzzing/scripts/app-campaign.sh --app-dir /path/to/your-app
+  "$BOLOS_SDK"/fuzzing/scripts/app-campaign.sh \
+  --app-dir /path/to/your-app my-first-run
+```
+
+- **`my-first-run`** is the campaign name (optional); output goes to
+  `/path/to/your-app/.fuzz-artifacts/my-first-run/`. Omit it to use a UTC
+  timestamp.
+- Defaults are a **quick local profile**: `WARMUP_SEC=30`, `MAIN_SEC=60`,
+  `WORKERS=min(2, nproc)`. Override for longer jobs (see SDK fuzzing README).
+
+Example: reuse a merged corpus from an earlier campaign (must match current
+`.compat-key` if present):
+
+```bash
+EXTRA_CORPUS=/path/to/your-app/.fuzz-artifacts/prior-run/targets/fuzz_globals/corpus \
+  "$BOLOS_SDK"/fuzzing/scripts/app-campaign.sh --app-dir /path/to/your-app chained-run
 ```
 
 The campaign builds the app, syncs the invariant, updates `scenario_layout.h`,
@@ -27,4 +42,5 @@ generates seeds, runs fuzzing, and writes the coverage report.
 ## Reference
 
 See `${BOLOS_SDK}/fuzzing/docs/APP_CONTRACT.md` for the full app-facing contract
-and `${BOLOS_SDK}/fuzzing/cmake/LedgerAppFuzz.cmake` for the CMake integration module.
+(env vars, `EXTRA_CORPUS`, CLI flags) and `${BOLOS_SDK}/fuzzing/cmake/LedgerAppFuzz.cmake`
+for the CMake integration module.
