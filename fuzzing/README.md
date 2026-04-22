@@ -101,8 +101,12 @@ times and `WORKERS` for overnight or farm jobs):
 | `OVERWRITE`      | unset                | Set to `1` to replace an existing `.fuzz-artifacts/<run-name>/` directory. |
 | `APP_TARGET`     | `flex`               | BOLOS target passed to CMake (`flex`, `stax`, …). |
 
-Full CLI flags, Absolution resolution, and compatibility keys:
-[docs/APP_CONTRACT.md](docs/APP_CONTRACT.md).
+Full CLI flags, Absolution resolution, compatibility keys, **why `.zon` files
+contain `/app/...` paths**, and **how to configure / sync / run LibFuzzer
+without `app-campaign.sh`**:
+
+[docs/APP_CONTRACT.md](docs/APP_CONTRACT.md) (sections *Invariant `.zon` files*
+and *Manual workflow*).
 
 ## Prerequisites
 

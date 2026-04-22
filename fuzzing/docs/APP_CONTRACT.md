@@ -482,6 +482,116 @@ is fuzzed.
   --fuzz-subdir fuzzing/sdk-fuzz
 ```
 
+## Invariant `.zon` files and `/app/...` paths
+
+Checked-in `invariants/fuzz_globals.zon` (and SDK `sdk-fuzz` models) contain
+`.source_file = "/app/..."` strings. Those paths are **Absolution metadata**
+(copied from the generated `build/<fast>/_absolution/<fuzzer>/fuzzer.c.zon` on
+the machine that last ran the pipeline). They are **included in Git** like any
+other generated-but-committed artefact.
+
+- **Fuzzing does not require** your checkout to live at `/app`. On a laptop,
+  the first **configure + build** produces a fresh `fuzzer.c.zon` whose
+  `.source_file` entries match **your** absolute paths.
+- **`sync-invariant.py`** (run by the campaign or manually below) rewrites
+  `fuzz_globals.zon` from that generated file. After a successful sync on your
+  machine, paths in `fuzz_globals.zon` match your tree (until someone commits a
+  different snapshot).
+- **`zero-symbols.txt`** selectors that use `@file.c` match when that substring
+  appears anywhere in the path, so `io_ext.c` still matches
+  `/home/you/.../io_ext.c`.
+
+Doc examples use `/path/to/ledger-secure-sdk` and `--app-dir`; only committed
+snapshots from the devcontainer often show `/app/...`.
+
+## Manual workflow (without `app-campaign.sh`)
+
+Use this when you only want to **configure**, **sync the invariant**, **refresh
+`scenario_layout.h`**, or **run LibFuzzer** without warmup/merge/coverage replay.
+Adjust `fuzz_globals` if your manifest defines another target name.
+
+**Environment (typical):**
+
+```bash
+export APP_DIR="/absolute/path/to/your-app"      # e.g. app-ethereum
+export BOLOS_SDK="/absolute/path/to/ledger-secure-sdk"
+export ABSOLUTION_DIR="/absolute/path/to/absolution"   # or rely on §Absolution resolution
+export APP_TARGET="${APP_TARGET:-flex}"
+SCRIPT_DIR="${BOLOS_SDK}/fuzzing/scripts"
+```
+
+**1. One shell with helpers loaded**
+
+```bash
+set -euo pipefail
+source "${SCRIPT_DIR}/app-common.sh"
+source "${SCRIPT_DIR}/app-config.sh"   # requires APP_DIR already set
+ensure_absolution
+```
+
+**2. Configure and build the sanitizer (“fast”) fuzzer**
+
+```bash
+BUILD_FAST="${APP_DIR}/build/fast"
+configure_fuzz_build "${APP_DIR}" "${BUILD_FAST}" RelWithDebInfo 0
+build_fuzzer_target "${BUILD_FAST}" fuzz_globals
+```
+
+**3. Sync `fuzz_globals.zon` and rebuild if the invariant changed**
+
+```bash
+INV="${APP_DIR}/fuzzing/invariants/fuzz_globals.zon"
+sync_invariant "${BUILD_FAST}" fuzz_globals "${INV}"
+if [[ "${INVARIANT_CHANGED:-0}" == 1 ]]; then
+  build_fuzzer_target "${BUILD_FAST}" fuzz_globals
+fi
+```
+
+To **force** a resync, delete `"${BUILD_FAST}/.fuzz-invariant-hash-fuzz_globals"`
+and run step 3 again.
+
+**4. Refresh `mock/scenario_layout.h`**
+
+```bash
+LAYOUT="${APP_DIR}/fuzzing/mock/scenario_layout.h"
+update_scenario_layout "${BUILD_FAST}" fuzz_globals "${LAYOUT}"
+```
+
+**5. Optional: coverage instrumented binary** (separate directory; used for
+`llvm-cov` replay, not for fast fuzzing)
+
+```bash
+BUILD_COV="${APP_DIR}/build/cov"
+configure_fuzz_build "${APP_DIR}" "${BUILD_COV}" RelWithDebInfo 1
+build_fuzzer_target "${BUILD_COV}" fuzz_globals
+```
+
+**6. Run LibFuzzer directly** (no dictionary / seeds unless you pass them)
+
+```bash
+mkdir -p /tmp/fuzz-corpus
+"${BUILD_FAST}/fuzz_globals" /tmp/fuzz-corpus \
+  -max_total_time=120 \
+  -timeout=2
+```
+
+Optional dictionary from the manifest:
+
+```bash
+DICT=/tmp/fuzz.dict
+python3 "${SCRIPT_DIR}/fuzz_manifest.py" --dict "${APP_DIR}/fuzzing/fuzz-manifest.toml" "${DICT}"
+# single-target; for multi-target add: --fuzzer fuzz_globals
+"${BUILD_FAST}/fuzz_globals" /tmp/fuzz-corpus -dict="${DICT}" -max_total_time=120
+```
+
+**7. Seeds** without the full campaign: each app’s `fuzzing/scripts/` may ship a
+generator (e.g. `generate-seed-corpus.py`); run it with `APP_DIR` and
+`BOLOS_SDK` set per that script’s help. The campaign wires the same generators
+automatically.
+
+Clang **19** (or the version picked by `pick_clang` in `app-common.sh`) and Ninja
+are expected; install paths match your OS.
+
 ## Compatibility key
 
 Corpora are versioned by:
