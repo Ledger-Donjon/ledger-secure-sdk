@@ -231,6 +231,13 @@ For the standard lane split, byte 0 of the control region selects the lane:
 - `<= 102`: raw lane (one APDU from the tail)
 - `> 102`: structured lane (app-defined, e.g. swap callback replay)
 
+Apps that need a lane-specific command distribution (different commands
+and/or weights in each lane) can override `FUZZ_PICK_COMMAND_RAW(data, size)`
+and `FUZZ_PICK_COMMAND_STRUCTURED(data, size)` before including
+`fuzz_harness.h`. Each macro must expand to a `const fuzz_command_spec_t *`
+drawn from an app-owned table; the defaults pick uniformly from
+`fuzz_commands[]` using `data[1]` / `fuzz_ctrl[1]`.
+
 Advanced harnesses may bypass `fuzz_harness_entry()` but must keep the same
 prefix/tail ownership, mutator wiring, and mock contract.
 

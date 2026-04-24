@@ -28,21 +28,11 @@
 
 #include "fuzz_defs.h"
 
-/* ── APDU policy flags ─────────────────────────────────────────────────────── */
-
-#define FUZZ_CMD_HAS_DATA    (1u << 0) /* command expects a data payload     */
-#define FUZZ_CMD_NO_RESPONSE (1u << 2) /* skip response handling             */
-
-/* ── Command spec ──────────────────────────────────────────────────────────── */
-
-typedef struct {
-    uint8_t cla;
-    uint8_t ins;
-    uint8_t p1_max; /* max valid P1; 0 = full range [0,255] */
-    uint8_t p2_max; /* max valid P2; 0 = full range [0,255] */
-    uint8_t flags;  /* FUZZ_CMD_* bitfield                  */
-} fuzz_command_spec_t;
-
+/*
+ * fuzz_command_spec_t and the FUZZ_CMD_* flags live in fuzz_defs.h so app
+ * harnesses can declare lane-specific command tables before overriding the
+ * FUZZ_PICK_COMMAND_* macros below.
+ */
 extern const fuzz_command_spec_t fuzz_commands[];
 extern const size_t              fuzz_n_commands;
 
@@ -75,6 +65,24 @@ static inline uint8_t fuzz_clamp_p(uint8_t raw, uint8_t p_max)
     return raw % (p_max + 1);
 }
 
+/* ── Lane-specific command selection hooks ────────────────────────────────── *
+ *
+ * Default behavior: structured lane picks via fuzz_ctrl[1], raw lane picks
+ * via data[1], both modulo fuzz_n_commands.  Apps that need different
+ * per-lane command distributions (e.g. Bitcoin's weighted raw/structured
+ * maps) can override these macros before including this header.  Each
+ * macro must expand to a `const fuzz_command_spec_t *`.
+ */
+#ifndef FUZZ_PICK_COMMAND_STRUCTURED
+#define FUZZ_PICK_COMMAND_STRUCTURED(data, size) \
+    (&fuzz_commands[fuzz_ctrl[1] % fuzz_n_commands])
+#endif
+
+#ifndef FUZZ_PICK_COMMAND_RAW
+#define FUZZ_PICK_COMMAND_RAW(data, size) \
+    (&fuzz_commands[(data)[1] % fuzz_n_commands])
+#endif
+
 /* ── Single-APDU dispatch entry ────────────────────────────────────────────── */
 
 static int fuzz_harness_entry(const uint8_t *data, size_t size)
@@ -94,12 +102,12 @@ static int fuzz_harness_entry(const uint8_t *data, size_t size)
     if (fuzz_use_structured_lane()) {
         fuzz_tail_ptr = (size > 4) ? data + 4 : NULL;
         fuzz_tail_len = (size > 4) ? size - 4 : 0;
-        spec          = &fuzz_commands[fuzz_ctrl[1] % fuzz_n_commands];
+        spec          = FUZZ_PICK_COMMAND_STRUCTURED(data, size);
     }
     else {
         fuzz_tail_ptr = NULL;
         fuzz_tail_len = 0;
-        spec          = &fuzz_commands[data[1] % fuzz_n_commands];
+        spec          = FUZZ_PICK_COMMAND_RAW(data, size);
     }
 
     command_t cmd;
