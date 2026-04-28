@@ -18,7 +18,7 @@ struct {
     uint8_t ebss[0xff];
 } mock_memory;
 
-void *_bss = &mock_memory.bss;
+void *_bss  = &mock_memory.bss;
 void *_ebss = &mock_memory.ebss;
 
 size_t strlcat(char *dst, const char *src, size_t size)

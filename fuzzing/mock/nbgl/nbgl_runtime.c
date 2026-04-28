@@ -15,42 +15,44 @@
 
 /* refresh */
 
-void nbgl_refresh(void) {
-}
+void nbgl_refresh(void) {}
 
-void nbgl_refreshSpecial(nbgl_refresh_mode_t mode) {
+void nbgl_refreshSpecial(nbgl_refresh_mode_t mode)
+{
     (void) mode;
 }
 
-void nbgl_refreshSpecialWithPostRefresh(nbgl_refresh_mode_t mode,
-                                        nbgl_post_refresh_t post_refresh) {
+void nbgl_refreshSpecialWithPostRefresh(nbgl_refresh_mode_t mode, nbgl_post_refresh_t post_refresh)
+{
     (void) mode;
     (void) post_refresh;
 }
 
-bool nbgl_refreshIsNeeded(void) {
+bool nbgl_refreshIsNeeded(void)
+{
     return false;
 }
 
-void nbgl_refreshReset(void) {
-}
+void nbgl_refreshReset(void) {}
 
 /* obj */
 
-void nbgl_objInit(void) {
-}
+void nbgl_objInit(void) {}
 
-void nbgl_objDraw(nbgl_obj_t *obj) {
+void nbgl_objDraw(nbgl_obj_t *obj)
+{
     (void) obj;
 }
 
-void nbgl_objAllowDrawing(bool enable) {
+void nbgl_objAllowDrawing(bool enable)
+{
     (void) enable;
 }
 
 static uint8_t ram_buffer[512];
 
-uint8_t *nbgl_objGetRAMBuffer(void) {
+uint8_t *nbgl_objGetRAMBuffer(void)
+{
     return ram_buffer;
 }
 
@@ -84,7 +86,8 @@ static uint16_t       obj_pool_idx;
 static nbgl_obj_t *container_ptr_pool[CONTAINER_PTR_POOL_SIZE];
 static uint16_t    container_ptr_pool_idx;
 
-nbgl_obj_t *nbgl_objPoolGet(nbgl_obj_type_t type, uint8_t layer) {
+nbgl_obj_t *nbgl_objPoolGet(nbgl_obj_type_t type, uint8_t layer)
+{
     (void) layer;
     if (obj_pool_idx >= OBJ_POOL_SIZE) {
         obj_pool_idx = 0;
@@ -95,32 +98,34 @@ nbgl_obj_t *nbgl_objPoolGet(nbgl_obj_type_t type, uint8_t layer) {
     return &slot->base;
 }
 
-uint8_t nbgl_objPoolGetId(nbgl_obj_t *obj) {
+uint8_t nbgl_objPoolGetId(nbgl_obj_t *obj)
+{
     (void) obj;
     return 0;
 }
 
-int nbgl_objPoolGetArray(nbgl_obj_type_t type,
-                         uint8_t         nbObjs,
-                         uint8_t         layer,
-                         nbgl_obj_t    **objArray) {
+int nbgl_objPoolGetArray(nbgl_obj_type_t type, uint8_t nbObjs, uint8_t layer, nbgl_obj_t **objArray)
+{
     for (uint8_t i = 0; i < nbObjs; i++) {
         objArray[i] = nbgl_objPoolGet(type, layer);
     }
     return 0;
 }
 
-uint8_t nbgl_objPoolGetNbUsed(uint8_t layer) {
+uint8_t nbgl_objPoolGetNbUsed(uint8_t layer)
+{
     (void) layer;
     return (uint8_t) obj_pool_idx;
 }
 
-void nbgl_objPoolRelease(uint8_t layer) {
+void nbgl_objPoolRelease(uint8_t layer)
+{
     (void) layer;
     obj_pool_idx = 0;
 }
 
-nbgl_obj_t **nbgl_containerPoolGet(uint8_t nbObjs, uint8_t layer) {
+nbgl_obj_t **nbgl_containerPoolGet(uint8_t nbObjs, uint8_t layer)
+{
     (void) layer;
     if (container_ptr_pool_idx + nbObjs > CONTAINER_PTR_POOL_SIZE) {
         container_ptr_pool_idx = 0;
@@ -131,24 +136,27 @@ nbgl_obj_t **nbgl_containerPoolGet(uint8_t nbObjs, uint8_t layer) {
     return slot;
 }
 
-uint8_t nbgl_containerPoolGetNbUsed(uint8_t layer) {
+uint8_t nbgl_containerPoolGetNbUsed(uint8_t layer)
+{
     (void) layer;
     return (uint8_t) container_ptr_pool_idx;
 }
 
-void nbgl_containerPoolRelease(uint8_t layer) {
+void nbgl_containerPoolRelease(uint8_t layer)
+{
     (void) layer;
     container_ptr_pool_idx = 0;
 }
 
 /* screen */
 
-#define SCREEN_STACK_SIZE     4
-#define MAX_SCREEN_CHILDREN  8
+#define SCREEN_STACK_SIZE   4
+#define MAX_SCREEN_CHILDREN 8
 static nbgl_obj_t *screen_elements[SCREEN_STACK_SIZE][MAX_SCREEN_CHILDREN];
 static uint8_t     screen_stack_idx;
 
-nbgl_obj_t *nbgl_screenContainsObjType(nbgl_screen_t *screen, nbgl_obj_type_t type) {
+nbgl_obj_t *nbgl_screenContainsObjType(nbgl_screen_t *screen, nbgl_obj_type_t type)
+{
     (void) screen;
     (void) type;
     return NULL;
@@ -158,7 +166,8 @@ nbgl_obj_t *nbgl_screenContainsObjType(nbgl_screen_t *screen, nbgl_obj_type_t ty
 int nbgl_screenSet(nbgl_obj_t                           ***elements,
                    uint8_t                                 nbElements,
                    const nbgl_screenTickerConfiguration_t *ticker,
-                   nbgl_touchCallback_t                    touchCallback) {
+                   nbgl_touchCallback_t                    touchCallback)
+{
     (void) nbElements;
     (void) ticker;
     (void) touchCallback;
@@ -170,7 +179,8 @@ int nbgl_screenSet(nbgl_obj_t                           ***elements,
 int nbgl_screenPush(nbgl_obj_t                           ***elements,
                     uint8_t                                 nbElements,
                     const nbgl_screenTickerConfiguration_t *ticker,
-                    nbgl_touchCallback_t                    touchCallback) {
+                    nbgl_touchCallback_t                    touchCallback)
+{
     (void) nbElements;
     (void) ticker;
     (void) touchCallback;
@@ -186,7 +196,8 @@ int nbgl_screenPush(nbgl_obj_t                           ***elements,
 int nbgl_screenSet(nbgl_obj_t                           ***elements,
                    uint8_t                                 nbElements,
                    const nbgl_screenTickerConfiguration_t *ticker,
-                   nbgl_buttonCallback_t                   buttonCallback) {
+                   nbgl_buttonCallback_t                   buttonCallback)
+{
     (void) nbElements;
     (void) ticker;
     (void) buttonCallback;
@@ -198,7 +209,8 @@ int nbgl_screenSet(nbgl_obj_t                           ***elements,
 int nbgl_screenPush(nbgl_obj_t                           ***elements,
                     uint8_t                                 nbElements,
                     const nbgl_screenTickerConfiguration_t *ticker,
-                    nbgl_buttonCallback_t                   buttonCallback) {
+                    nbgl_buttonCallback_t                   buttonCallback)
+{
     (void) nbElements;
     (void) ticker;
     (void) buttonCallback;
@@ -212,10 +224,10 @@ int nbgl_screenPush(nbgl_obj_t                           ***elements,
 }
 #endif
 
-void nbgl_screenRedraw(void) {
-}
+void nbgl_screenRedraw(void) {}
 
-int nbgl_screenPop(uint8_t screenIndex) {
+int nbgl_screenPop(uint8_t screenIndex)
+{
     (void) screenIndex;
     if (screen_stack_idx > 0) {
         screen_stack_idx--;
@@ -223,91 +235,104 @@ int nbgl_screenPop(uint8_t screenIndex) {
     return 0;
 }
 
-nbgl_obj_t **nbgl_screenGetElements(uint8_t screenIndex) {
+nbgl_obj_t **nbgl_screenGetElements(uint8_t screenIndex)
+{
     if (screenIndex < SCREEN_STACK_SIZE) {
         return screen_elements[screenIndex];
     }
     return screen_elements[0];
 }
 
-uint8_t nbgl_screenGetCurrentStackSize(void) {
+uint8_t nbgl_screenGetCurrentStackSize(void)
+{
     return screen_stack_idx;
 }
 
-uint8_t nbgl_screenGetUxStackSize(void) {
+uint8_t nbgl_screenGetUxStackSize(void)
+{
     return 0;
 }
 
-nbgl_obj_t *nbgl_screenGetAt(uint8_t screenIndex) {
+nbgl_obj_t *nbgl_screenGetAt(uint8_t screenIndex)
+{
     (void) screenIndex;
     return NULL;
 }
 
-nbgl_obj_t *nbgl_screenGetTop(void) {
+nbgl_obj_t *nbgl_screenGetTop(void)
+{
     return NULL;
 }
 
-int nbgl_screenUpdateTicker(uint8_t                                screenIndex,
-                            const nbgl_screenTickerConfiguration_t *ticker) {
+int nbgl_screenUpdateTicker(uint8_t screenIndex, const nbgl_screenTickerConfiguration_t *ticker)
+{
     (void) screenIndex;
     (void) ticker;
     return 0;
 }
 
-int nbgl_screenUpdateBackgroundColor(uint8_t screenIndex, color_t color) {
+int nbgl_screenUpdateBackgroundColor(uint8_t screenIndex, color_t color)
+{
     (void) screenIndex;
     (void) color;
     return 0;
 }
 
-int nbgl_screenReset(void) {
+int nbgl_screenReset(void)
+{
     screen_stack_idx = 0;
     return 0;
 }
 
-void nbgl_screenHandler(uint32_t intervaleMs) {
+void nbgl_screenHandler(uint32_t intervaleMs)
+{
     (void) intervaleMs;
 }
 
 /* fonts */
 
 static const nbgl_font_t mock_font = {
-    .bitmap_len = 0,
-    .font_id    = 0,
-    .bpp        = 1,
-    .height     = 12,
-    .line_height = 14,
+    .bitmap_len   = 0,
+    .font_id      = 0,
+    .bpp          = 1,
+    .height       = 12,
+    .line_height  = 14,
     .char_kerning = 0,
-    .crop       = 0,
-    .y_min      = 0,
-    .first_char = 0x20,
-    .last_char  = 0x7E,
-    .characters = NULL,
-    .bitmap     = NULL,
+    .crop         = 0,
+    .y_min        = 0,
+    .first_char   = 0x20,
+    .last_char    = 0x7E,
+    .characters   = NULL,
+    .bitmap       = NULL,
 };
 
-uint8_t nbgl_getCharWidth(nbgl_font_id_e fontId, const char *text) {
+uint8_t nbgl_getCharWidth(nbgl_font_id_e fontId, const char *text)
+{
     (void) fontId;
     (void) text;
     return 8;
 }
 
-const nbgl_font_t *nbgl_getFont(nbgl_font_id_e fontId) {
+const nbgl_font_t *nbgl_getFont(nbgl_font_id_e fontId)
+{
     (void) fontId;
     return &mock_font;
 }
 
-uint8_t nbgl_getFontHeight(nbgl_font_id_e fontId) {
+uint8_t nbgl_getFontHeight(nbgl_font_id_e fontId)
+{
     (void) fontId;
     return 12;
 }
 
-uint8_t nbgl_getFontLineHeight(nbgl_font_id_e fontId) {
+uint8_t nbgl_getFontLineHeight(nbgl_font_id_e fontId)
+{
     (void) fontId;
     return 14;
 }
 
-uint16_t nbgl_getSingleLineTextWidth(nbgl_font_id_e fontId, const char *text) {
+uint16_t nbgl_getSingleLineTextWidth(nbgl_font_id_e fontId, const char *text)
+{
     (void) fontId;
     if (text == NULL) {
         return 0;
@@ -315,9 +340,8 @@ uint16_t nbgl_getSingleLineTextWidth(nbgl_font_id_e fontId, const char *text) {
     return (uint16_t) (strlen(text) * 8);
 }
 
-uint16_t nbgl_getSingleLineTextWidthInLen(nbgl_font_id_e fontId,
-                                          const char    *text,
-                                          uint16_t       maxLen) {
+uint16_t nbgl_getSingleLineTextWidthInLen(nbgl_font_id_e fontId, const char *text, uint16_t maxLen)
+{
     (void) fontId;
     if (text == NULL) {
         return 0;
@@ -329,7 +353,8 @@ uint16_t nbgl_getSingleLineTextWidthInLen(nbgl_font_id_e fontId,
     return len * 8;
 }
 
-uint16_t nbgl_getTextHeight(nbgl_font_id_e fontId, const char *text) {
+uint16_t nbgl_getTextHeight(nbgl_font_id_e fontId, const char *text)
+{
     (void) fontId;
     (void) text;
     return 14;
@@ -338,7 +363,8 @@ uint16_t nbgl_getTextHeight(nbgl_font_id_e fontId, const char *text) {
 uint16_t nbgl_getTextHeightInWidth(nbgl_font_id_e fontId,
                                    const char    *text,
                                    uint16_t       maxWidth,
-                                   bool           wrapping) {
+                                   bool           wrapping)
+{
     (void) fontId;
     (void) text;
     (void) maxWidth;
@@ -351,7 +377,8 @@ void nbgl_getTextMaxLenAndWidth(nbgl_font_id_e fontId,
                                 uint16_t       maxWidth,
                                 uint16_t      *len,
                                 uint16_t      *width,
-                                bool           wrapping) {
+                                bool           wrapping)
+{
     (void) fontId;
     (void) text;
     (void) maxWidth;
@@ -367,7 +394,8 @@ void nbgl_getTextMaxLenAndWidth(nbgl_font_id_e fontId,
 uint16_t nbgl_getTextNbLinesInWidth(nbgl_font_id_e fontId,
                                     const char    *text,
                                     uint16_t       maxWidth,
-                                    bool           wrapping) {
+                                    bool           wrapping)
+{
     (void) fontId;
     (void) text;
     (void) maxWidth;
@@ -378,7 +406,8 @@ uint16_t nbgl_getTextNbLinesInWidth(nbgl_font_id_e fontId,
 uint8_t nbgl_getTextNbPagesInWidth(nbgl_font_id_e fontId,
                                    const char    *text,
                                    uint8_t        nbLinesPerPage,
-                                   uint16_t       maxWidth) {
+                                   uint16_t       maxWidth)
+{
     (void) fontId;
     (void) text;
     (void) nbLinesPerPage;
@@ -386,7 +415,8 @@ uint8_t nbgl_getTextNbPagesInWidth(nbgl_font_id_e fontId,
     return 1;
 }
 
-uint16_t nbgl_getTextWidth(nbgl_font_id_e fontId, const char *text) {
+uint16_t nbgl_getTextWidth(nbgl_font_id_e fontId, const char *text)
+{
     (void) fontId;
     if (text == NULL) {
         return 0;
@@ -399,7 +429,8 @@ bool nbgl_getTextMaxLenInNbLines(nbgl_font_id_e fontId,
                                  uint16_t       maxWidth,
                                  uint16_t       maxNbLines,
                                  uint16_t      *len,
-                                 bool           wrapping) {
+                                 bool           wrapping)
+{
     (void) fontId;
     (void) maxWidth;
     (void) maxNbLines;
@@ -415,7 +446,8 @@ void nbgl_textReduceOnNbLines(nbgl_font_id_e fontId,
                               uint16_t       maxWidth,
                               uint8_t        nbLines,
                               char          *reducedText,
-                              uint16_t       reducedTextLen) {
+                              uint16_t       reducedTextLen)
+{
     (void) fontId;
     (void) maxWidth;
     (void) nbLines;
@@ -425,38 +457,38 @@ void nbgl_textReduceOnNbLines(nbgl_font_id_e fontId,
     }
 }
 
-void nbgl_textWrapOnNbLines(nbgl_font_id_e fontId,
-                            char          *text,
-                            uint16_t       maxWidth,
-                            uint8_t        nbLines) {
+void nbgl_textWrapOnNbLines(nbgl_font_id_e fontId, char *text, uint16_t maxWidth, uint8_t nbLines)
+{
     (void) fontId;
     (void) text;
     (void) maxWidth;
     (void) nbLines;
 }
 
-void nbgl_refreshUnicodeFont(const LANGUAGE_PACK *lp) {
+void nbgl_refreshUnicodeFont(const LANGUAGE_PACK *lp)
+{
     (void) lp;
 }
 
 /* touch */
 
-void nbgl_touchHandler(bool                       fromUx,
-                       nbgl_touchStatePosition_t *touchEvent,
-                       uint32_t                   currentTimeMs) {
+void nbgl_touchHandler(bool fromUx, nbgl_touchStatePosition_t *touchEvent, uint32_t currentTimeMs)
+{
     (void) fromUx;
     (void) touchEvent;
     (void) currentTimeMs;
 }
 
-uint32_t nbgl_touchGetTouchDuration(nbgl_obj_t *obj) {
+uint32_t nbgl_touchGetTouchDuration(nbgl_obj_t *obj)
+{
     (void) obj;
     return 0;
 }
 
 bool nbgl_touchGetTouchedPosition(nbgl_obj_t                 *obj,
                                   nbgl_touchStatePosition_t **firstPos,
-                                  nbgl_touchStatePosition_t **lastPos) {
+                                  nbgl_touchStatePosition_t **lastPos)
+{
     (void) obj;
     (void) firstPos;
     (void) lastPos;
@@ -465,23 +497,25 @@ bool nbgl_touchGetTouchedPosition(nbgl_obj_t                 *obj,
 
 /* buttons */
 
-void nbgl_buttonsHandler(uint8_t buttonState, uint32_t currentTimeMs) {
+void nbgl_buttonsHandler(uint8_t buttonState, uint32_t currentTimeMs)
+{
     (void) buttonState;
     (void) currentTimeMs;
 }
 
-void nbgl_buttonsReset(void) {
-}
+void nbgl_buttonsReset(void) {}
 
 /* keyboard / keypad */
 
 #ifndef HAVE_SE_TOUCH
-void nbgl_keyboardCallback(nbgl_obj_t *obj, nbgl_buttonEvent_t buttonEvent) {
+void nbgl_keyboardCallback(nbgl_obj_t *obj, nbgl_buttonEvent_t buttonEvent)
+{
     (void) obj;
     (void) buttonEvent;
 }
 
-void nbgl_keypadCallback(nbgl_obj_t *obj, nbgl_buttonEvent_t buttonEvent) {
+void nbgl_keypadCallback(nbgl_obj_t *obj, nbgl_buttonEvent_t buttonEvent)
+{
     (void) obj;
     (void) buttonEvent;
 }
@@ -490,10 +524,11 @@ void nbgl_keypadCallback(nbgl_obj_t *obj, nbgl_buttonEvent_t buttonEvent) {
 /* draw */
 
 nbgl_font_id_e nbgl_drawText(const nbgl_area_t *area,
-                              const char        *text,
-                              uint16_t           textLen,
-                              nbgl_font_id_e     fontId,
-                              color_t            fontColor) {
+                             const char        *text,
+                             uint16_t           textLen,
+                             nbgl_font_id_e     fontId,
+                             color_t            fontColor)
+{
     (void) area;
     (void) text;
     (void) textLen;

@@ -15,6 +15,4 @@ int PRINTF(const char *format, ...)
 }
 
 /* Zeroing BSS would erase Absolution prefix state between iterations. */
-void os_explicit_zero_BSS_segment(void)
-{
-}
+void os_explicit_zero_BSS_segment(void) {}
