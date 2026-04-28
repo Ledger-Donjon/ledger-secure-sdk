@@ -20,7 +20,9 @@ if(NOT EXISTS "${BOLOS_SDK}/fuzzing/include/fuzz_mutator.h")
 endif()
 
 # Interface version — apps can set LEDGER_FUZZ_MIN_VERSION to require a minimum.
-set(LEDGER_FUZZ_INTERFACE_VERSION 1)
+# v2: Absolution is auto-fetched from GitHub releases; ABSOLUTION_DIR / sibling
+#     checkout / find_package(Absolution) at app-side are no longer required.
+set(LEDGER_FUZZ_INTERFACE_VERSION 2)
 if(DEFINED LEDGER_FUZZ_MIN_VERSION)
   if(LEDGER_FUZZ_INTERFACE_VERSION LESS LEDGER_FUZZ_MIN_VERSION)
     message(FATAL_ERROR
@@ -52,6 +54,47 @@ endfunction()
 
 ledger_fuzz_validate_app_files()
 
+# ── Absolution dependency ────────────────────────────────────────────────────
+# By default, fetch the latest Linux release zip from GitHub at configure time.
+# To skip the download (offline / unreleased Absolution), set either the CMake
+# variable or env var LEDGER_FUZZ_ABSOLUTION_LOCAL_DIR to a directory that
+# contains bin/absolution and lib/cmake/Absolution/.
+function(_ledger_fuzz_resolve_absolution)
+  set(_local "${LEDGER_FUZZ_ABSOLUTION_LOCAL_DIR}")
+  if(NOT _local AND DEFINED ENV{LEDGER_FUZZ_ABSOLUTION_LOCAL_DIR})
+    set(_local "$ENV{LEDGER_FUZZ_ABSOLUTION_LOCAL_DIR}")
+  endif()
+
+  if(_local)
+    if(NOT EXISTS "${_local}/bin/absolution"
+       OR NOT EXISTS "${_local}/lib/cmake/Absolution")
+      message(FATAL_ERROR
+        "LEDGER_FUZZ_ABSOLUTION_LOCAL_DIR=${_local} is not a valid Absolution "
+        "install (expected bin/absolution and lib/cmake/Absolution/).")
+    endif()
+    set(_root "${_local}")
+    message(STATUS "LedgerFuzz: using local Absolution at ${_root}")
+  else()
+    include(FetchContent)
+    FetchContent_Declare(absolution
+      URL https://github.com/Ledger-Donjon/absolution/releases/latest/download/release-ubuntu-latest-ReleaseFast.zip
+      DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+    FetchContent_MakeAvailable(absolution)
+    set(_root "${absolution_SOURCE_DIR}")
+    message(STATUS "LedgerFuzz: fetched Absolution into ${_root}")
+  endif()
+
+  set(Absolution_DIR "${_root}/lib/cmake/Absolution"
+      CACHE PATH "Absolution CMake package directory" FORCE)
+  set(ABSOLUTION_EXECUTABLE "${_root}/bin/absolution"
+      CACHE FILEPATH "Absolution code generator binary" FORCE)
+
+  list(APPEND CMAKE_BUILD_RPATH   "${_root}/lib")
+  list(APPEND CMAKE_INSTALL_RPATH "${_root}/lib")
+  set(CMAKE_BUILD_RPATH   "${CMAKE_BUILD_RPATH}"   PARENT_SCOPE)
+  set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_RPATH}" PARENT_SCOPE)
+endfunction()
+
 # ── Setup helper ─────────────────────────────────────────────────────────────
 # Call once after project() to pull in the SDK fuzz subtree and Absolution.
 #
@@ -60,11 +103,12 @@ ledger_fuzz_validate_app_files()
 #   ledger_fuzz_setup()
 #
 macro(ledger_fuzz_setup)
+  _ledger_fuzz_resolve_absolution()
   add_subdirectory(
     ${BOLOS_SDK}/fuzzing
     ${CMAKE_CURRENT_BINARY_DIR}/ledger-secure-sdk
     EXCLUDE_FROM_ALL)
-  find_package(Absolution REQUIRED)
+  find_package(Absolution REQUIRED CONFIG)
 endmacro()
 
 # ── App-target helper ────────────────────────────────────────────────────────

@@ -7,7 +7,6 @@ BOLOS_SDK="${BOLOS_SDK:-$(realpath -m "${FUZZ_DIR}/..")}"
 export BOLOS_SDK
 
 APP_DIR="${APP_DIR:-}"
-_CLI_ABSOLUTION_DIR=""
 _CLI_FUZZ_SUBDIR=""
 _CLI_TARGETS=()
 _CLI_CLEAN=0
@@ -15,8 +14,6 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --app-dir) APP_DIR="$2"; shift 2 ;;
     --app-dir=*) APP_DIR="${1#*=}"; shift ;;
-    --absolution-dir) _CLI_ABSOLUTION_DIR="$2"; shift 2 ;;
-    --absolution-dir=*) _CLI_ABSOLUTION_DIR="${1#*=}"; shift ;;
     --fuzz-subdir) _CLI_FUZZ_SUBDIR="$2"; shift 2 ;;
     --fuzz-subdir=*) _CLI_FUZZ_SUBDIR="${1#*=}"; shift ;;
     --target) _CLI_TARGETS+=("$2"); shift 2 ;;
@@ -31,9 +28,6 @@ if [[ -z "${APP_DIR}" ]]; then
 fi
 APP_DIR=$(realpath -m "${APP_DIR}")
 export APP_DIR
-if [[ -n "${_CLI_ABSOLUTION_DIR}" ]]; then
-  export ABSOLUTION_DIR="${_CLI_ABSOLUTION_DIR}"
-fi
 if [[ -n "${_CLI_FUZZ_SUBDIR}" ]]; then
   export APP_FUZZ_SUBDIR="${_CLI_FUZZ_SUBDIR}"
 fi
@@ -207,7 +201,6 @@ fi
 # ── Build all targets ────────────────────────────────────────────────────────
 
 echo "=== Building fuzzers (fast) ==="
-ensure_absolution
 configure_fuzz_build "${APP_DIR}" "${BUILD_DIR_FAST}" "${BUILD_TYPE}" 0
 
 for _target in "${CAMPAIGN_TARGETS[@]}"; do

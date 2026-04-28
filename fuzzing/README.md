@@ -101,18 +101,18 @@ times and `WORKERS` for overnight or farm jobs):
 | `OVERWRITE`      | unset                | Set to `1` to replace an existing `.fuzz-artifacts/<run-name>/` directory. |
 | `APP_TARGET`     | `flex`               | BOLOS target passed to CMake (`flex`, `stax`, …). |
 
-Full CLI flags, Absolution resolution, compatibility keys, why `.zon` files
-contain `/app/...` paths, and how to configure / sync / run LibFuzzer without
-`app-campaign.sh`:
+Full CLI flags, compatibility keys, why `.zon` files contain `/app/...` paths,
+and how to configure / sync / run LibFuzzer without `app-campaign.sh`:
 
 [docs/CAMPAIGN_WORKFLOW.md](docs/CAMPAIGN_WORKFLOW.md).
 
 ## Prerequisites
 
 - Clang ≥ 14 with `llvm-profdata` and `llvm-cov` (for coverage reports).
-- Absolution built and resolvable (see
-  [docs/CAMPAIGN_WORKFLOW.md](docs/CAMPAIGN_WORKFLOW.md) §Absolution
-  resolution — `ABSOLUTION_DIR`, `--absolution-dir`, or a sibling checkout).
+- Network access on first configure: CMake fetches the latest Absolution
+  Linux release automatically. Set `LEDGER_FUZZ_ABSOLUTION_LOCAL_DIR` (CMake
+  variable or env var) to a local Absolution install to skip the download
+  (offline / unreleased Absolution).
 - `BOLOS_SDK` pointing at a checkout of this SDK.
 
 ## Directory layout

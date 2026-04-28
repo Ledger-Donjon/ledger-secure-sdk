@@ -61,90 +61,6 @@ pick_default_workers() {
   fi
 }
 
-find_absolution_cmake_dir() {
-  local abs_dir="${1:-}"
-
-  if [[ -n "${ABSOLUTION_CMAKE_DIR:-}" ]]; then
-    if [[ -d "${ABSOLUTION_CMAKE_DIR}" ]]; then
-      echo "${ABSOLUTION_CMAKE_DIR}"
-      return 0
-    fi
-    echo "error: ABSOLUTION_CMAKE_DIR not found at ${ABSOLUTION_CMAKE_DIR}" >&2
-    return 1
-  fi
-
-  local dir="${abs_dir}/lib/cmake/Absolution"
-  if [[ -d "${dir}" ]]; then
-    echo "${dir}"
-    return 0
-  fi
-
-  echo "error: Absolution CMake config not found" >&2
-  echo "hint: expected ${abs_dir}/lib/cmake/Absolution or ABSOLUTION_CMAKE_DIR" >&2
-  return 1
-}
-
-export_absolution_lib_path() {
-  local base="${RESOLVED_ABSOLUTION_DIR:-${ABSOLUTION_DIR:-}}"
-  local lib_dir
-
-  [[ -n "${base}" ]] || return 0
-  lib_dir="${base}/lib"
-  [[ -d "${lib_dir}" ]] || return 0
-
-  case ":${LD_LIBRARY_PATH:-}:" in
-    *":${lib_dir}:"*)
-      return 0
-      ;;
-  esac
-
-  if [[ -n "${LD_LIBRARY_PATH:-}" ]]; then
-    export LD_LIBRARY_PATH="${lib_dir}:${LD_LIBRARY_PATH}"
-  else
-    export LD_LIBRARY_PATH="${lib_dir}"
-  fi
-}
-
-ensure_absolution() {
-  # Resolution order:
-  #   1. ABSOLUTION_DIR env (or --absolution-dir CLI, which sets the env)
-  #   2. Inside the SDK:  ${BOLOS_SDK}/fuzzing/absolution/
-  #   3. Sibling of SDK:  ${BOLOS_SDK}/../absolution/
-  local abs_dir=""
-  local -a candidates=()
-
-  if [[ -n "${ABSOLUTION_DIR:-}" ]]; then
-    candidates+=("${ABSOLUTION_DIR}")
-  fi
-  candidates+=("$(realpath -m "${BOLOS_SDK}/fuzzing/absolution")")
-  candidates+=("$(realpath -m "${BOLOS_SDK}/../absolution")")
-
-  for _candidate in "${candidates[@]}"; do
-    if [[ -d "${_candidate}" && -x "${_candidate}/bin/absolution" ]]; then
-      abs_dir="${_candidate}"
-      break
-    fi
-  done
-
-  if [[ -z "${abs_dir}" ]]; then
-    echo "error: Absolution not found. Searched:" >&2
-    for _candidate in "${candidates[@]}"; do
-      echo "  - ${_candidate}" >&2
-    done
-    echo "hint: set ABSOLUTION_DIR, use --absolution-dir, or unpack the release" >&2
-    echo "      into \${BOLOS_SDK}/fuzzing/absolution/ or next to the SDK." >&2
-    return 1
-  fi
-
-  if ! find_absolution_cmake_dir "${abs_dir}" >/dev/null; then
-    return 1
-  fi
-
-  RESOLVED_ABSOLUTION_DIR="${abs_dir}"
-  RESOLVED_ABSOLUTION_BIN="${abs_dir}/bin/absolution"
-  export_absolution_lib_path
-}
-
 resolve_invariant_path() {
   local target_name="${1:?missing target name}"
   local app_dir="${APP_DIR:?APP_DIR must be set}"
@@ -162,9 +78,6 @@ configure_fuzz_build() {
   local build_type="${3:-${APP_FUZZ_BUILD_TYPE:-RelWithDebInfo}}"
   local llvm_coverage
   local sdk_dir="${BOLOS_SDK:?BOLOS_SDK must be set}"
-  local abs_dir="${RESOLVED_ABSOLUTION_DIR:?ensure_absolution must be called first}"
-  local abs_bin="${RESOLVED_ABSOLUTION_BIN:?ensure_absolution must be called first}"
-  local abs_cmake_dir
   local clang
   local target="${APP_TARGET:-flex}"
   local sanitizer="${APP_SANITIZER:-address}"
@@ -179,7 +92,6 @@ configure_fuzz_build() {
 
   check_build_dir_app_match "${build_dir}" "${app_dir}/${fuzz_subdir}"
 
-  abs_cmake_dir="$(find_absolution_cmake_dir "${abs_dir}")"
   clang="$(pick_clang)"
   llvm_coverage="$(cmake_bool "${4:-${APP_FUZZ_SOURCE_COVERAGE:-0}}")"
 
@@ -187,7 +99,7 @@ configure_fuzz_build() {
     generator=(-G Ninja)
   fi
 
-  local _config_key="${app_dir}|${fuzz_subdir}|${build_type}|${sdk_dir}|${target}|${sanitizer}|${llvm_coverage}|${abs_cmake_dir}|${abs_bin}"
+  local _config_key="${app_dir}|${fuzz_subdir}|${build_type}|${sdk_dir}|${target}|${sanitizer}|${llvm_coverage}"
   local _config_hash
   _config_hash=$(printf '%s' "${_config_key}" | sha256sum | cut -d' ' -f1)
   local _hash_file="${build_dir}/.fuzz-configure-hash"
@@ -213,8 +125,6 @@ configure_fuzz_build() {
       -D SANITIZER="${sanitizer}" \
       -D FUZZ_ENABLE_SOURCE_COVERAGE="${llvm_coverage}" \
       -D APP_BUILD_PATH="$(pwd)" \
-      -D Absolution_DIR="${abs_cmake_dir}" \
-      -D ABSOLUTION_EXECUTABLE="${abs_bin}" \
       "${generator[@]}"
   )
 

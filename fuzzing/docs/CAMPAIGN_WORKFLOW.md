@@ -1,7 +1,7 @@
 # Campaign Workflow Reference
 
-Operational reference for running `app-campaign.sh`, resolving Absolution,
-understanding `.zon` source paths, and driving the pipeline manually.
+Operational reference for running `app-campaign.sh`, understanding `.zon`
+source paths, and driving the pipeline manually.
 
 For app-side integration (which files an app must ship, what each one must
 contain) see [APP_CONTRACT.md](APP_CONTRACT.md).
@@ -27,7 +27,6 @@ depend on the shell’s current working directory.
 | Flag                   | Description                                                       |
 |------------------------|-------------------------------------------------------------------|
 | `--app-dir DIR`        | Path to the app root (required)                                   |
-| `--absolution-dir DIR` | Override Absolution resolution                                    |
 | `--fuzz-subdir DIR`    | Override the fuzzing subtree (default: `fuzzing`)                 |
 | `--target NAME`        | Restrict to one fuzzer (repeatable; multi-target manifest only)   |
 | `--clean`              | Delete build directories before configuring (full rebuild)        |
@@ -45,7 +44,7 @@ depend on the shell’s current working directory.
 | `APP_TARGET`           | `flex`  | Device target for CMake (`flex`, `stax`, …).        |
 | `OVERWRITE`            | unset   | Set to `1` to replace an existing `.fuzz-artifacts/<run>/` tree. |
 | `SKIP_INVARIANT_SYNC`  | unset   | Skip `sync-invariant.py` (keep hand-tuned `.zon`)   |
-| `ABSOLUTION_DIR`       | unset   | Absolution install prefix (first lookup)            |
+| `LEDGER_FUZZ_ABSOLUTION_LOCAL_DIR` | unset | Path to a local Absolution install (`<dir>/bin/absolution` + `<dir>/lib/cmake/Absolution/`). When set, CMake skips the GitHub download. |
 | `BOLOS_SDK`            | parent of `fuzzing/` when unset | Must point at this SDK checkout for paths and CMake. |
 | `ARTIFACTS_ROOT`       | `<app>/.fuzz-artifacts` | Root directory for campaign output.          |
 | `BUILD_DIR_FAST` / `BUILD_DIR_COV` | `<app>/build/fast` and `build/cov` | Sanitizer fuzz binary vs coverage replay binary. |
@@ -56,18 +55,22 @@ fast. For meaningful coverage growth or regression hunting, increase
 WORKERS=4`). To cap machine load without editing the script, use
 `WORKERS=1` and/or lower `BUILD_JOBS`.
 
-### Absolution resolution
+### Absolution dependency
 
-Absolution is resolved in this order:
+Absolution is a CMake `FetchContent` dependency of `ledger_fuzz_setup()`. On
+first configure, CMake downloads the latest Linux release zip from
+`https://github.com/Ledger-Donjon/absolution/releases/latest` into the build
+directory and sets `Absolution_DIR`, `ABSOLUTION_EXECUTABLE`, and the
+build/install RPATHs accordingly. No script flag, env var, or sibling
+checkout is involved.
 
-1. `ABSOLUTION_DIR` environment variable.
-2. `--absolution-dir DIR` CLI flag.
-3. `${BOLOS_SDK}/fuzzing/absolution/` (bundled in the SDK, if any).
-4. `${BOLOS_SDK}/../absolution/` (sibling checkout).
+To skip the download (offline machines, unreleased Absolution), set the
+CMake variable or env var `LEDGER_FUZZ_ABSOLUTION_LOCAL_DIR` to a directory
+containing `bin/absolution` and `lib/cmake/Absolution/`:
 
-For CI images that pre-install Absolution system-wide, point
-`ABSOLUTION_DIR` at the install prefix. For workspace checkouts, the sibling
-fallback works as-is.
+```bash
+export LEDGER_FUZZ_ABSOLUTION_LOCAL_DIR=/absolute/path/to/absolution
+```
 
 ### Campaign flow (single-target)
 
@@ -137,9 +140,10 @@ defines another target name.
 ```bash
 export APP_DIR="/absolute/path/to/your-app"      # e.g. app-ethereum
 export BOLOS_SDK="/absolute/path/to/ledger-secure-sdk"
-export ABSOLUTION_DIR="/absolute/path/to/absolution"   # or rely on §Absolution resolution
 export APP_TARGET="${APP_TARGET:-flex}"
 SCRIPT_DIR="${BOLOS_SDK}/fuzzing/scripts"
+# Optional, only needed for offline / unreleased Absolution:
+# export LEDGER_FUZZ_ABSOLUTION_LOCAL_DIR=/absolute/path/to/absolution
 ```
 
 **1. One shell with helpers loaded**
@@ -148,7 +152,6 @@ SCRIPT_DIR="${BOLOS_SDK}/fuzzing/scripts"
 set -euo pipefail
 source "${SCRIPT_DIR}/app-common.sh"
 source "${SCRIPT_DIR}/app-config.sh"   # requires APP_DIR already set
-ensure_absolution
 ```
 
 **2. Configure and build the sanitizer (“fast”) fuzzer**
