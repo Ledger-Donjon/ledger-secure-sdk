@@ -1,46 +1,44 @@
-# Fuzzing Template
+# App Fuzzing Template
 
-Copy this directory to `<APP_SRC>/fuzzing/`, then compare each file with
-`app-boilerplate/fuzzing/` to fill in the app-specific parts.
+Minimal scaffold to plug a Ledger app into the SDK fuzz framework. Copy
+this directory to `<APP_SRC>/fuzzing/`, then fill the TODOs below. The
+contract this template implements is documented in
+[`../docs/APP_CONTRACT.md`](../docs/APP_CONTRACT.md); operational details
+(campaign flags, environment, manual workflow) live in
+[`../docs/CAMPAIGN_WORKFLOW.md`](../docs/CAMPAIGN_WORKFLOW.md).
 
-## What to edit
+## Onboarding checklist
 
-| File | What you fill in |
-|---|---|
-| `fuzz-manifest.toml` | CLA, INS list, key coverage files, dictionary tokens |
-| `CMakeLists.txt` | project name, source globs, include directories, compile definitions |
-| `harness/fuzz_dispatcher.c` | command table, app reset, dispatcher call |
-| `mock/mocks.h` / `mock/mocks.c` | extra globals or app-specific mocks only if needed |
-| `invariants/zero-symbols.txt` | app globals that should be removed from the prefix |
-| `invariants/domain-overrides.txt` | enum and state constraints after the first sync |
+1. Copy `fuzzing/template/` to `<APP_SRC>/fuzzing/`.
+2. `fuzz-manifest.toml`: set CLA, INS list, `key_files`, and any
+   dictionary tokens.
+3. `CMakeLists.txt`: project name, source globs, include directories,
+   compile definitions.
+4. `harness/fuzz_dispatcher.c`: command table, `fuzz_app_reset()`,
+   `fuzz_app_dispatch()`.
+5. `mock/mocks.h` / `mock/mocks.c`: only if the app needs extra globals
+   or app-specific mocks beyond the defaults shipped here.
+6. Run the first campaign:
 
-## First run
+   ```bash
+   BOLOS_SDK=/path/to/ledger-secure-sdk \
+     "$BOLOS_SDK"/fuzzing/scripts/app-campaign.sh \
+     --app-dir /path/to/your-app first-run
+   ```
 
-```bash
-BOLOS_SDK=/path/to/ledger-secure-sdk \
-  "$BOLOS_SDK"/fuzzing/scripts/app-campaign.sh \
-  --app-dir /path/to/your-app my-first-run
-```
+7. After the run, populate `invariants/zero-symbols.txt` with globals you
+   want stripped from the prefix and (optionally) tighten enum domains in
+   `invariants/domain-overrides.txt`.
 
-- **`my-first-run`** is the campaign name (optional); output goes to
-  `/path/to/your-app/.fuzz-artifacts/my-first-run/`. Omit it to use a UTC
-  timestamp.
-- Defaults are a **quick local profile**: `WARMUP_SEC=30`, `MAIN_SEC=60`,
-  `WORKERS=min(2, nproc)`. Override for longer jobs (see SDK fuzzing README).
-
-Example: reuse a merged corpus from an earlier campaign (must match current
-`.compat-key` if present):
-
-```bash
-EXTRA_CORPUS=/path/to/your-app/.fuzz-artifacts/prior-run/targets/fuzz_globals/corpus \
-  "$BOLOS_SDK"/fuzzing/scripts/app-campaign.sh --app-dir /path/to/your-app chained-run
-```
-
-The campaign builds the app, syncs the invariant, updates `scenario_layout.h`,
-generates seeds, runs fuzzing, and writes the coverage report.
+The campaign builds the app, syncs the invariant, refreshes
+`scenario_layout.h`, generates seeds, fuzzes, and writes a coverage
+report under `<app>/.fuzz-artifacts/<run-name>/`.
 
 ## Reference
 
-See `${BOLOS_SDK}/fuzzing/docs/APP_CONTRACT.md` for the full app-facing contract
-(env vars, `EXTRA_CORPUS`, CLI flags) and `${BOLOS_SDK}/fuzzing/cmake/LedgerAppFuzz.cmake`
-for the CMake integration module.
+- Filled standard example: `app-boilerplate/fuzzing/`.
+- Filled advanced example: `app-bitcoin-new/fuzzing/`.
+- App contract: [`../docs/APP_CONTRACT.md`](../docs/APP_CONTRACT.md).
+- Campaign / manual workflow:
+  [`../docs/CAMPAIGN_WORKFLOW.md`](../docs/CAMPAIGN_WORKFLOW.md).
+- SDK mock layer: [`../mock/README.md`](../mock/README.md).

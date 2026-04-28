@@ -1,16 +1,5 @@
-/*
- * Fuzz-mode stubs for NBGL use-case functions.
- *
- * Replaces the real nbgl_use_case.c (excluded from the SDK build via
- * lib_nbgl.cmake) so that review/approval callbacks fire immediately.
- *
- * fuzz_mock_nbgl_reject: Absolution-controlled global.
- *   0 → approve (callback with true)   nonzero → reject (callback with false)
- * Absolution discovers this BSS global and includes it in the prefix.
- * Apps enable dual-path coverage by adding a domain override:
- *   fuzz_mock_nbgl_reject. = values \x00 \x01
- *
- * Owned by the framework; linked via LEDGER_FUZZ_COMMON_SOURCES.
+/* NBGL use-case mocks.
+ * fuzz_mock_nbgl_reject controls approve/reject callback paths.
  */
 
 #include "nbgl_use_case.h"
@@ -23,7 +12,7 @@ static inline bool _nbgl_approve(void)
     return fuzz_mock_nbgl_reject == 0;
 }
 
-/* ── Review / approval ────────────────────────────────────────────────────── */
+/* review / approval */
 
 void nbgl_useCaseReview(nbgl_operationType_t              operationType __attribute__((unused)),
                         const nbgl_contentTagValueList_t *tagValueList __attribute__((unused)),
@@ -120,7 +109,7 @@ void nbgl_useCaseChoiceWithDetails(const nbgl_icon_details_t *icon __attribute__
     }
 }
 
-/* ── Streaming review: auto-approve ───────────────────────────────────────── */
+/* streaming review */
 
 void nbgl_useCaseReviewStreamingStart(nbgl_operationType_t operationType __attribute__((unused)),
                                       const nbgl_icon_details_t *icon __attribute__((unused)),
@@ -188,7 +177,7 @@ void nbgl_useCaseReviewStreamingFinish(const char           *finishTitle __attri
     }
 }
 
-/* ── Status / navigation: no-op (don't invoke quit callbacks) ─────────────── */
+/* status / navigation */
 
 void nbgl_useCaseReviewStatus(nbgl_reviewStatusType_t reviewStatusType __attribute__((unused)),
                               nbgl_callback_t         quitCallback __attribute__((unused)))
@@ -238,7 +227,7 @@ void nbgl_useCaseStatus(const char     *message __attribute__((unused)),
 
 void nbgl_useCaseSpinner(const char *text __attribute__((unused))) {}
 
-/* ── Actions / confirmations: auto-confirm ────────────────────────────────── */
+/* actions / confirmations */
 
 void nbgl_useCaseConfirm(const char     *message __attribute__((unused)),
                          const char     *subMessage __attribute__((unused)),
@@ -271,7 +260,7 @@ void nbgl_useCaseNavigableContent(const char                *title __attribute__
 {
 }
 
-/* ── Deprecated HAVE_SE_TOUCH APIs ────────────────────────────────────────── */
+/* HAVE_SE_TOUCH use cases */
 
 #ifdef HAVE_SE_TOUCH
 
@@ -364,7 +353,7 @@ void nbgl_useCaseSettings(const char                *settingsTitle __attribute__
 
 #endif /* HAVE_SE_TOUCH */
 
-/* ── Utility functions: minimal stubs ─────────────────────────────────────── */
+/* utility functions */
 
 uint8_t nbgl_useCaseGetNbTagValuesInPage(uint8_t                           nbPairs,
                                          const nbgl_contentTagValueList_t *tagValueList

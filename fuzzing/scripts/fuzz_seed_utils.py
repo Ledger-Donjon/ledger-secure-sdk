@@ -4,7 +4,7 @@ Provides layout parsing, prefix size resolution, and seed prefix
 materialization used by both the generic and app-specific seed generators.
 
 Apps with custom seed generators import this module instead of duplicating
-the layout/prefix resolution logic.  See framework/APP_CONTRACT.md for
+the layout/prefix resolution logic.  See docs/APP_CONTRACT.md for
 the env var interface.
 """
 

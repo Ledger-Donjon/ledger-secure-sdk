@@ -3,12 +3,11 @@ include(${BOLOS_SDK}/fuzzing/macros/macros.cmake)
 include(${BOLOS_SDK}/fuzzing/libs/lib_io.cmake)
 include(${BOLOS_SDK}/fuzzing/libs/lib_glyphs.cmake)
 include(${BOLOS_SDK}/fuzzing/libs/lib_qrcode.cmake)
-include(${BOLOS_SDK}/fuzzing/mock/mock.cmake)
 
 file(GLOB LIB_NBGL_SOURCES "${BOLOS_SDK}/lib_nbgl/src/*.c"
      "${BOLOS_SDK}/lib_ux_nbgl/*.c")
 # Exclude nbgl_use_case*.c — the fuzzing framework provides auto-approve
-# stubs (framework/mock/fuzz_nbgl_use_case.c) so that review callbacks are
+# stubs (fuzzing/mock/nbgl/nbgl_use_case.c) so that review callbacks are
 # invoked immediately and post-approval code paths are reachable.
 list(FILTER LIB_NBGL_SOURCES EXCLUDE REGEX "nbgl_use_case[^/]*\\.c$")
 add_library(nbgl ${LIB_NBGL_SOURCES})

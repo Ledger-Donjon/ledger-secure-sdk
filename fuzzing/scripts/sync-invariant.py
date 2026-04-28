@@ -13,7 +13,7 @@ Usage:
 
 Zero-symbol list format (one per line, # comments, blank lines ignored):
     G_ux                          # match by name
-    ram_buffer@nbgl_shared.c      # match name AND source_file substring
+    ram_buffer@nbgl_runtime.c     # match name AND source_file substring
 """
 
 import argparse

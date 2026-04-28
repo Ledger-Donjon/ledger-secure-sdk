@@ -1,3 +1,7 @@
+/* Exception and NVM mocks.
+ * os_sched_exit and os_lib_end longjmp back to the fuzz harness.
+ */
+
 #include <setjmp.h>
 #include <string.h>
 

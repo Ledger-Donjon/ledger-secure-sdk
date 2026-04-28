@@ -1,3 +1,7 @@
+/* Big-number and EC point mocks.
+ * Strong overrides for generated syscall stubs used by lib_cxng.
+ */
+
 #include <string.h>
 #include <stdbool.h>
 

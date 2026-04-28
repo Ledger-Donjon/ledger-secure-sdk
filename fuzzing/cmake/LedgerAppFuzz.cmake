@@ -5,18 +5,13 @@ include_guard()
 # Include from your app's fuzzing/CMakeLists.txt:
 #   include(${BOLOS_SDK}/fuzzing/cmake/LedgerAppFuzz.cmake)
 #
-# Provides:
-#   LEDGER_FUZZ_COMMON_SOURCES     — common mock sources (fuzz_sha256.c)
-#
 # See ${BOLOS_SDK}/fuzzing/docs/APP_CONTRACT.md for the full contract.
 
 set(LEDGER_FUZZ_DIR "${CMAKE_CURRENT_LIST_DIR}/.." CACHE PATH "SDK fuzzing root")
 
-# Common mock sources
-file(GLOB LEDGER_FUZZ_COMMON_SOURCES "${LEDGER_FUZZ_DIR}/mock/common/*.c")
-
-# Optional mutator sources — apps can add these to their target
-set(LEDGER_FUZZ_TLV_MUTATOR_SOURCE "${LEDGER_FUZZ_DIR}/include/tlv_mutator.c"
+# Optional mutator sources — apps add these to their target's SOURCES /
+# EXTRA_TARGETS to opt into a grammar-aware mutator.
+set(LEDGER_FUZZ_TLV_MUTATOR_SOURCE "${LEDGER_FUZZ_DIR}/mock/tlv_mutator.c"
     CACHE PATH "TLV grammar-aware mutator source")
 
 # Header validation
@@ -110,7 +105,7 @@ function(ledger_fuzz_add_app_target)
 
   absolution_add_fuzzer(
     NAME                ${F_NAME}
-    TARGETS             ${F_SOURCES} ${LEDGER_FUZZ_COMMON_SOURCES} ${F_EXTRA_TARGETS}
+    TARGETS             ${F_SOURCES} ${F_EXTRA_TARGETS}
     HARNESS             ${F_HARNESS}
     ENTRY               ${F_ENTRY}
     INVARIANT           ${F_INVARIANT}

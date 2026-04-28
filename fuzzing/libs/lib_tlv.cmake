@@ -1,7 +1,6 @@
 include_guard()
 include(${BOLOS_SDK}/fuzzing/macros/macros.cmake)
 include(${BOLOS_SDK}/fuzzing/libs/lib_cxng.cmake)
-include(${BOLOS_SDK}/fuzzing/mock/mock.cmake)
 
 file(GLOB LIB_TLV_SOURCES
   "${BOLOS_SDK}/lib_tlv/*.c"

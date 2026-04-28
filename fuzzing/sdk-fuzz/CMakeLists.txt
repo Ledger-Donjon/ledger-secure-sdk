@@ -43,7 +43,6 @@ absolution_add_fuzzer(
     NAME fuzz_alloc
     TARGETS
         ${SDK_FUZZ_MOCK_SOURCES}
-        ${LEDGER_FUZZ_COMMON_SOURCES}
     HARNESS
         ${CMAKE_SOURCE_DIR}/harness/fuzz_alloc.c
     ENTRY fuzz_entry
@@ -56,7 +55,6 @@ absolution_add_fuzzer(
     NAME fuzz_alloc_utils
     TARGETS
         ${SDK_FUZZ_MOCK_SOURCES}
-        ${LEDGER_FUZZ_COMMON_SOURCES}
     HARNESS
         ${CMAKE_SOURCE_DIR}/harness/fuzz_alloc_utils.c
     ENTRY fuzz_entry
@@ -69,7 +67,6 @@ absolution_add_fuzzer(
     NAME fuzz_lists
     TARGETS
         ${SDK_FUZZ_MOCK_SOURCES}
-        ${LEDGER_FUZZ_COMMON_SOURCES}
     HARNESS
         ${CMAKE_SOURCE_DIR}/harness/fuzz_lists.c
     ENTRY fuzz_entry
@@ -84,7 +81,6 @@ absolution_add_fuzzer(
     NAME fuzz_apdu_parser
     TARGETS
         ${SDK_FUZZ_MOCK_SOURCES}
-        ${LEDGER_FUZZ_COMMON_SOURCES}
     HARNESS
         ${CMAKE_SOURCE_DIR}/harness/fuzz_apdu_parser.c
     ENTRY fuzz_entry
@@ -97,7 +93,6 @@ absolution_add_fuzzer(
     NAME fuzz_base58
     TARGETS
         ${SDK_FUZZ_MOCK_SOURCES}
-        ${LEDGER_FUZZ_COMMON_SOURCES}
     HARNESS
         ${CMAKE_SOURCE_DIR}/harness/fuzz_base58.c
     ENTRY fuzz_entry
@@ -110,7 +105,6 @@ absolution_add_fuzzer(
     NAME fuzz_bip32
     TARGETS
         ${SDK_FUZZ_MOCK_SOURCES}
-        ${LEDGER_FUZZ_COMMON_SOURCES}
     HARNESS
         ${CMAKE_SOURCE_DIR}/harness/fuzz_bip32.c
     ENTRY fuzz_entry
@@ -123,7 +117,6 @@ absolution_add_fuzzer(
     NAME fuzz_qrcodegen
     TARGETS
         ${SDK_FUZZ_MOCK_SOURCES}
-        ${LEDGER_FUZZ_COMMON_SOURCES}
     HARNESS
         ${CMAKE_SOURCE_DIR}/harness/fuzz_qrcodegen.c
     ENTRY fuzz_entry
@@ -138,7 +131,6 @@ absolution_add_fuzzer(
     NAME fuzz_tlv_dynamic_descriptor
     TARGETS
         ${SDK_FUZZ_MOCK_SOURCES}
-        ${LEDGER_FUZZ_COMMON_SOURCES}
         ${TLV_EXTRA_SOURCES}
     HARNESS
         ${CMAKE_SOURCE_DIR}/harness/fuzz_tlv_dynamic_descriptor.c
@@ -155,7 +147,6 @@ absolution_add_fuzzer(
     NAME fuzz_tlv_trusted_name
     TARGETS
         ${SDK_FUZZ_MOCK_SOURCES}
-        ${LEDGER_FUZZ_COMMON_SOURCES}
         ${TLV_EXTRA_SOURCES}
     HARNESS
         ${CMAKE_SOURCE_DIR}/harness/fuzz_tlv_trusted_name.c
@@ -174,7 +165,6 @@ absolution_add_fuzzer(
     NAME fuzz_nfc_ndef
     TARGETS
         ${SDK_FUZZ_MOCK_SOURCES}
-        ${LEDGER_FUZZ_COMMON_SOURCES}
     HARNESS
         ${CMAKE_SOURCE_DIR}/harness/fuzz_nfc_ndef.c
     ENTRY fuzz_entry

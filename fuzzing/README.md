@@ -101,17 +101,17 @@ times and `WORKERS` for overnight or farm jobs):
 | `OVERWRITE`      | unset                | Set to `1` to replace an existing `.fuzz-artifacts/<run-name>/` directory. |
 | `APP_TARGET`     | `flex`               | BOLOS target passed to CMake (`flex`, `stax`, …). |
 
-Full CLI flags, Absolution resolution, compatibility keys, **why `.zon` files
-contain `/app/...` paths**, and **how to configure / sync / run LibFuzzer
-without `app-campaign.sh`**:
+Full CLI flags, Absolution resolution, compatibility keys, why `.zon` files
+contain `/app/...` paths, and how to configure / sync / run LibFuzzer without
+`app-campaign.sh`:
 
-[docs/APP_CONTRACT.md](docs/APP_CONTRACT.md) (sections *Invariant `.zon` files*
-and *Manual workflow*).
+[docs/CAMPAIGN_WORKFLOW.md](docs/CAMPAIGN_WORKFLOW.md).
 
 ## Prerequisites
 
 - Clang ≥ 14 with `llvm-profdata` and `llvm-cov` (for coverage reports).
-- Absolution built and resolvable (see `docs/APP_CONTRACT.md` §Absolution
+- Absolution built and resolvable (see
+  [docs/CAMPAIGN_WORKFLOW.md](docs/CAMPAIGN_WORKFLOW.md) §Absolution
   resolution — `ABSOLUTION_DIR`, `--absolution-dir`, or a sibling checkout).
 - `BOLOS_SDK` pointing at a checkout of this SDK.
 
@@ -120,23 +120,25 @@ and *Manual workflow*).
 | Path              | Purpose                                                                                   |
 |-------------------|-------------------------------------------------------------------------------------------|
 | `cmake/`          | `LedgerAppFuzz.cmake` — the CMake module apps include                                     |
-| `docs/`           | `APP_CONTRACT.md` (integration contract) + `fuzz_lists.md` (lists mock reference)         |
+| `docs/`           | App contract, campaign workflow, and SDK-specific fuzz target notes                       |
 | `template/`       | Minimal app fuzzing scaffold; copy into a new app as `fuzzing/`                           |
 | `scripts/`        | Campaign pipeline (`app-campaign.sh`, seed generators, invariant / layout sync)           |
 | `include/`        | Framework headers + optional TLV grammar-aware mutator                                    |
-| `mock/common/`    | Mock sources linked into every fuzzer (e.g. streaming SHA-256)                            |
-| `mock/custom/`    | Strong mock overrides (crypto, NBGL, system, BN/EC)                                       |
+| `mock/cx/`        | Strong crypto, big-number, and EC point mocks                                             |
+| `mock/nbgl/`      | NBGL runtime and use-case mocks                                                           |
+| `mock/os/`        | OS, PIC, exception, libc, NVM, and I/O runtime shims                                      |
+| `mock/_generated/`| Generated weak syscall stubs                                                              |
 | `mock/gen_mock.py`| Generator for weak syscall stubs                                                          |
 | `libs/`           | Per-library CMake modules aggregated into the `secure_sdk` INTERFACE target               |
 | `macros/`         | Build macro extraction and add / exclude lists                                            |
 | `invariants/`     | SDK-level zero-symbol policy (applied to every app)                                       |
 | `sanitizers/`     | UBSan / ASan runtime config and ignorelists                                               |
 | `sdk-fuzz/`       | 10 self-fuzz targets exercising the framework with the same app contract                  |
-| `shared_libs/`    | Prebuilt NBGL shared libraries                                                            |
 
 ## For app developers
 
 Start from [`template/`](template/README.md) and follow
 [`docs/APP_CONTRACT.md`](docs/APP_CONTRACT.md). The app owns its `fuzzing/`
-folder (harness, manifest, invariants, macro overrides); everything else is
-pulled from the SDK through `include(${BOLOS_SDK}/fuzzing/cmake/LedgerAppFuzz.cmake)`.
+folder: manifest, CMake file, harness, app-local mocks, invariants, macros,
+and optional seeds. Shared SDK mocks and libraries come from
+`include(${BOLOS_SDK}/fuzzing/cmake/LedgerAppFuzz.cmake)`.

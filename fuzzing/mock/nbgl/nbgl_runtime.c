@@ -1,9 +1,5 @@
-/**
- * Mocks for nbgl shared functions (normally provided by the OS via syscalls).
- * These stubs allow fuzzing without the real NBGL rendering stack.
- *
- * Pool-based mocks allocate from static arrays so that callers always
- * receive valid (zero-initialised) memory instead of NULL.
+/* NBGL runtime mocks.
+ * Provides lightweight object, screen, font, input, and draw stubs.
  */
 
 #include "nbgl_types.h"
@@ -13,12 +9,11 @@
 #include "nbgl_touch.h"
 #include "nbgl_buttons.h"
 #include "nbgl_draw.h"
-#include "os_pic.h"
 
 #include <stddef.h>
 #include <string.h>
 
-/* ---------- refresh ---------- */
+/* refresh */
 
 void nbgl_refresh(void) {
 }
@@ -40,7 +35,7 @@ bool nbgl_refreshIsNeeded(void) {
 void nbgl_refreshReset(void) {
 }
 
-/* ---------- obj ---------- */
+/* obj */
 
 void nbgl_objInit(void) {
 }
@@ -59,7 +54,7 @@ uint8_t *nbgl_objGetRAMBuffer(void) {
     return ram_buffer;
 }
 
-/* ---------- obj pool ---------- */
+/* obj pool */
 
 typedef union {
     nbgl_obj_t            base;
@@ -146,7 +141,7 @@ void nbgl_containerPoolRelease(uint8_t layer) {
     container_ptr_pool_idx = 0;
 }
 
-/* ---------- screen ---------- */
+/* screen */
 
 #define SCREEN_STACK_SIZE     4
 #define MAX_SCREEN_CHILDREN  8
@@ -274,7 +269,7 @@ void nbgl_screenHandler(uint32_t intervaleMs) {
     (void) intervaleMs;
 }
 
-/* ---------- fonts ---------- */
+/* fonts */
 
 static const nbgl_font_t mock_font = {
     .bitmap_len = 0,
@@ -444,7 +439,7 @@ void nbgl_refreshUnicodeFont(const LANGUAGE_PACK *lp) {
     (void) lp;
 }
 
-/* ---------- touch ---------- */
+/* touch */
 
 void nbgl_touchHandler(bool                       fromUx,
                        nbgl_touchStatePosition_t *touchEvent,
@@ -468,7 +463,7 @@ bool nbgl_touchGetTouchedPosition(nbgl_obj_t                 *obj,
     return false;
 }
 
-/* ---------- buttons ---------- */
+/* buttons */
 
 void nbgl_buttonsHandler(uint8_t buttonState, uint32_t currentTimeMs) {
     (void) buttonState;
@@ -478,7 +473,7 @@ void nbgl_buttonsHandler(uint8_t buttonState, uint32_t currentTimeMs) {
 void nbgl_buttonsReset(void) {
 }
 
-/* ---------- keyboard / keypad ---------- */
+/* keyboard / keypad */
 
 #ifndef HAVE_SE_TOUCH
 void nbgl_keyboardCallback(nbgl_obj_t *obj, nbgl_buttonEvent_t buttonEvent) {
@@ -492,7 +487,7 @@ void nbgl_keypadCallback(nbgl_obj_t *obj, nbgl_buttonEvent_t buttonEvent) {
 }
 #endif
 
-/* ---------- draw ---------- */
+/* draw */
 
 nbgl_font_id_e nbgl_drawText(const nbgl_area_t *area,
                               const char        *text,
@@ -504,15 +499,4 @@ nbgl_font_id_e nbgl_drawText(const nbgl_area_t *area,
     (void) textLen;
     (void) fontColor;
     return fontId;
-}
-
-/* ---------- pic ---------- */
-
-void *pic_shared(const void *linked_address) {
-    return (void *) linked_address;
-}
-
-void pic_init(void *pic_flash_start, void *pic_ram_start) {
-    (void) pic_flash_start;
-    (void) pic_ram_start;
 }

@@ -40,12 +40,12 @@ src:*/lib_cxng/src/*
 src:*/lib_standard_app/buffer.c
 
 # tlv_mutator PRNG uses `Seed * 1103515245u + 12345u` — wrapping by design.
-src:*/fuzzing/include/tlv_mutator.c
+src:*/fuzzing/mock/tlv_mutator.c
 
 # SHA-256 mock (ROTR + modular-add round function): W schedule and
 # compression loop rely on wrapping uint32_t arithmetic, identical to the
 # on-device SHA-256 implementation.
-src:*/fuzzing/mock/common/fuzz_sha256.c
+src:*/app-bitcoin-new/fuzzing/mock/fuzz_sha256.c
 
 # Bech32 reference implementation (BIP-0173): convert_bits uses
 # `while (inlen--)` underflow as loop sentinel and wraps val<<inbits
@@ -60,7 +60,7 @@ src:*/src/uint256.c
 
 [unsigned-shift-base]
 src:*/lib_cxng/src/*
-src:*/fuzzing/mock/common/fuzz_sha256.c
+src:*/app-bitcoin-new/fuzzing/mock/fuzz_sha256.c
 src:*/src/common/segwit_addr.c
 
 # Big-integer libraries: shift/shiftl128, shiftr128 intentionally shift
@@ -69,7 +69,7 @@ src:*/src/uint128.c
 
 [shift-base]
 src:*/lib_cxng/src/*
-src:*/fuzzing/mock/common/fuzz_sha256.c
+src:*/app-bitcoin-new/fuzzing/mock/fuzz_sha256.c
 src:*/src/common/segwit_addr.c
 src:*/src/uint128.c
 

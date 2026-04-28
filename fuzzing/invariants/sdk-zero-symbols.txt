@@ -18,15 +18,16 @@ G_io_asynch_ux_callback
 G_ux
 G_ux_params
 G_ux_os
+gLogger
 
 # ── NBGL layout / object pools (mock and SDK sources) ────────────────────
-ram_buffer@nbgl_shared
-obj_pool@nbgl_shared
-obj_pool_idx@nbgl_shared
-container_ptr_pool@nbgl_shared
-container_ptr_pool_idx@nbgl_shared
-screen_elements@nbgl_shared
-screen_stack_idx@nbgl_shared
+ram_buffer@nbgl_runtime.c
+obj_pool@nbgl_runtime.c
+obj_pool_idx@nbgl_runtime.c
+container_ptr_pool@nbgl_runtime.c
+container_ptr_pool_idx@nbgl_runtime.c
+screen_elements@nbgl_runtime.c
+screen_stack_idx@nbgl_runtime.c
 gLayout
 topLayout
 nbTouchableControls
@@ -60,7 +61,6 @@ reducedAddress@nbgl_use_case.c
 
 # ── SDK mock infrastructure ───────────────────────────────────────────────
 mock_memory
-gLogger
 bn_pool
 bn_next_slot
 G_exception_context

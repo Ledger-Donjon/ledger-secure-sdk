@@ -1,24 +1,26 @@
 #pragma once
 /*
- * Compile-time layout consistency checks for Absolution-based Ledger app fuzzers.
+ * Compile-time layout consistency checks for Absolution-based fuzzers.
  *
- * Include this header after scenario_layout.h and the FUZZ_* mutator macro
- * definitions.  It validates that the layout constants are internally
- * consistent before the mutator or harness uses them.
+ * Include after scenario_layout.h and the FUZZ_* mutator macros so the
+ * mutator and harness see a validated layout.
  *
- * Required: SCEN_PREFIX_SIZE
- * Optional: SCEN_CTRL_OFF, SCEN_CTRL_LEN (minimal integrations define these)
+ * Required (defined by the app's scenario_layout.h):
+ * - SCEN_CTRL_OFF, SCEN_CTRL_LEN
+ * Required (defined by the app's fuzz_dispatcher.c):
+ * - FUZZ_CTRL_OFF, FUZZ_CTRL_LEN
  *
- * are always validated against the prefix size.
+ * Optional:
+ * - SCEN_PREFIX_SIZE       (single-target apps; multi-target SDK builds
+ *                           leave it undefined and resolve at runtime)
+ * - SCEN_APP_DATA_OFF/LEN  (apps that expose an extra app-data window)
+ * - FUZZ_APP_DATA_OFF/LEN  (mutator-side knob for that window)
+ * - FUZZ_PREFIX_SIZE_FALLBACK (cross-checked against SCEN_PREFIX_SIZE
+ *                              when both are defined)
  *
- * See framework/APP_CONTRACT.md § "scenario_layout.h Contract".
+ * See docs/APP_CONTRACT.md § "mock/scenario_layout.h".
  */
 
-/*
- * SCEN_PREFIX_SIZE is optional for multi-target builds where each target
- * has a different Absolution prefix size.  When defined, full consistency
- * checks are performed; otherwise only FUZZ_CTRL_LEN > 0 is validated.
- */
 #ifdef SCEN_PREFIX_SIZE
 
 _Static_assert(SCEN_PREFIX_SIZE > 0, "SCEN_PREFIX_SIZE must be positive");

@@ -1,10 +1,14 @@
 # App Fuzzing Contract
 
-This document defines what an app must ship under `<app>/fuzzing/` to plug
-into the SDK fuzz framework. Code and this file must agree; if they don't,
-fix the code or fix this document immediately. `app-boilerplate` is the
-standard filled example. `app-bitcoin-new` is the advanced custom-harness
-example.
+Defines what an app must ship under `<app>/fuzzing/` to plug into the SDK
+fuzz framework. Code and this file must agree; if they don't, fix the code
+or fix this document immediately.
+
+- `app-boilerplate` is the standard filled example.
+- `app-bitcoin-new` is the advanced custom-harness example.
+- For campaign mechanics (CLI flags, environment, manual workflow,
+  Absolution resolution, `.zon` paths), see
+  [CAMPAIGN_WORKFLOW.md](CAMPAIGN_WORKFLOW.md).
 
 ## Mental model
 
@@ -15,10 +19,10 @@ Every fuzzer input is two parts:
 ```
 
 - The **prefix** is Absolution-managed global state restored before each
-  iteration. The invariant (`fuzz_globals.zon`) describes which bytes map to
-  which globals and which domains they can take.
-- The **tail** is the remaining bytes the harness interprets — typically one
-  APDU reconstructed from `fuzz_ctrl` + `fuzz_tail_ptr / fuzz_tail_len`.
+  iteration. The invariant (`fuzz_globals.zon`) describes which bytes map
+  to which globals and which domains they can take.
+- The **tail** is the remaining bytes the harness interprets — typically
+  one APDU reconstructed from `fuzz_ctrl` + `fuzz_tail_ptr / fuzz_tail_len`.
 
 For standard apps, one iteration means:
 
@@ -30,6 +34,22 @@ For standard apps, one iteration means:
 State that would normally be accumulated over several host messages can be
 restored directly into globals by Absolution, so one APDU per iteration is
 enough for coverage-guided fuzzing.
+
+### Data flow
+
+```text
+LibFuzzer
+  └─> LLVMFuzzerTestOneInput   (Absolution-generated)
+        └─> fuzz_entry         (app, in harness/fuzz_dispatcher.c)
+              └─> fuzz_harness_entry   (SDK, fuzzing/include/fuzz_harness.h)
+                    ├─ pick a fuzz_command_spec_t
+                    ├─ build a command_t from the tail
+                    └─> fuzz_app_dispatch  (app)
+                          └─> apdu_dispatcher  (real app code)
+```
+
+Advanced apps may bypass `fuzz_harness_entry()` but must keep the same
+prefix/tail ownership, mutator wiring, and required symbols.
 
 ## Minimal directory layout
 
@@ -70,6 +90,10 @@ Every integrated app must provide a `fuzzing/` subtree at the app root:
 | `macros/add_macros.txt`           | app      | extra `-D` defines appended to the app Makefile defines            |
 | `macros/exclude_macros.txt`       | app      | `-D` defines removed from the app Makefile defines                 |
 | `base-corpus/`                    | app      | promoted seeds auto-imported by `app-campaign.sh`                  |
+
+Anything that is _not_ app-specific (cxng, NBGL, system, BN/EC, syscalls)
+lives in the SDK mock library; see
+[`../mock/README.md`](../mock/README.md).
 
 ## `fuzz-manifest.toml`
 
@@ -124,8 +148,8 @@ seeds = { cla = 0x00, ins = [0x01] }
 
 Each `[[targets]]` entry inherits `harness_version` from `[sdk]` and may
 override it. Coverage exclude regexes are shared across all targets. The
-campaign runs all targets (or a `--target`-filtered subset) and produces a
-single combined coverage report.
+campaign runs all targets (or a `--target`-filtered subset) and produces
+a single combined coverage report.
 
 ### Common optional sections
 
@@ -177,7 +201,7 @@ ledger_fuzz_add_app_target(
 - `HARNESS   ${CMAKE_SOURCE_DIR}/harness/fuzz_dispatcher.c`
 - `ENTRY     fuzz_entry`
 - `INVARIANT ${CMAKE_SOURCE_DIR}/invariants/fuzz_globals.zon`
-- Links `secure_sdk` and appends `${LEDGER_FUZZ_COMMON_SOURCES}`.
+- Links `secure_sdk` and any `EXTRA_TARGETS` the app requests.
 
 Apps with non-standard layouts can pass any of the above explicitly, or
 bypass the helper and call `absolution_add_fuzzer()` directly.
@@ -238,9 +262,6 @@ and `FUZZ_PICK_COMMAND_STRUCTURED(data, size)` before including
 drawn from an app-owned table; the defaults pick uniformly from
 `fuzz_commands[]` using `data[1]` / `fuzz_ctrl[1]`.
 
-Advanced harnesses may bypass `fuzz_harness_entry()` but must keep the same
-prefix/tail ownership, mutator wiring, and mock contract.
-
 ## `mock/mocks.h` and `mock/mocks.c`
 
 Every app must expose these symbols:
@@ -275,9 +296,8 @@ void os_explicit_zero_BSS_segment(void) {
 }
 ```
 
-Do not reimplement SDK-level semantic mocks here (cxng, nbgl, system, BN/EC);
-those live under `ledger-secure-sdk/fuzzing/mock/` and are linked via
-`secure_sdk`.
+Do not reimplement SDK-level semantic mocks here; those live under
+`ledger-secure-sdk/fuzzing/mock/` and are linked via `secure_sdk`.
 
 ## `mock/scenario_layout.h`
 
@@ -309,16 +329,13 @@ During a campaign the framework:
 4. Rewrites `fuzz_globals.zon`.
 5. Optionally applies `domain-overrides.txt`.
 
-Use `SKIP_INVARIANT_SYNC=1` to keep a hand-tuned invariant file across runs.
-
-## What to put where
-
-A short cheat sheet for integrators deciding where a given tweak belongs.
+Use `SKIP_INVARIANT_SYNC=1` to keep a hand-tuned invariant file across
+runs.
 
 ### `invariants/zero-symbols.txt`
 
-Globals the prefix must not consume bytes for — forcibly zeroed before each
-iteration. Good candidates:
+Globals the prefix must not consume bytes for — forcibly zeroed before
+each iteration. Good candidates:
 
 - Large static buffers used as scratch (`G_io_apdu_buffer`, APDU staging).
 - UI / NBGL bookkeeping globals not relevant to protocol fuzzing.
@@ -329,7 +346,7 @@ Format: one symbol per line. File-local symbols use `symbol@file.c`:
 
 ```text
 G_io_apdu_buffer
-ram_buffer@nbgl_shared.c
+ram_buffer@nbgl_runtime.c
 ```
 
 Adding a global here makes the prefix shorter and focuses coverage on the
@@ -338,8 +355,9 @@ bytes that drive app logic.
 ### `invariants/domain-overrides.txt`
 
 Per-field constraints applied after the invariant is generated. Use these
-when Absolution's default domain is too wide to converge — typically enums,
-state machines, or bits that only have a handful of meaningful values.
+when Absolution's default domain is too wide to converge — typically
+enums, state machines, or bits that only have a handful of meaningful
+values.
 
 ```text
 G_context.state = values \x00 \x01 \x02      # state enum
@@ -348,15 +366,17 @@ G_swap_response_ready. = values \x00 \x01    # boolean flag
 some_counter. = top                          # use full domain (opt in)
 ```
 
-Trailing `.` means "the value of this symbol" (not its address); `values \x00
-\x01` means "restrict to these byte patterns". The sync step writes these
-constraints back into `fuzz_globals.zon` on every run.
+Trailing `.` means "the value of this symbol" (not its address); `values
+\x00 \x01` means "restrict to these byte patterns". The sync step writes
+these constraints back into `fuzz_globals.zon` on every run.
+
+## Macros
 
 ### `macros/add_macros.txt`
 
-Extra `-D` defines appended to the set `make list-defines` reports from the
-app Makefile. Use this when the fuzz build needs a flag the release build
-doesn't.
+Extra `-D` defines appended to the set `make list-defines` reports from
+the app Makefile. Use this when the fuzz build needs a flag the release
+build doesn't.
 
 ```text
 FUZZ_APP_EXTRA_FEATURE=1
@@ -377,235 +397,17 @@ App-level example (rarely needed):
 SOME_RELEASE_ONLY_FLAG
 ```
 
-### `base-corpus/`
+## `base-corpus/`
 
 An on-disk corpus (one file per input) promoted from previous campaigns.
 The campaign script copies it under
-`<artifacts>/targets/<fuzzer>/base-corpus/` as additional seeds for the next
-run. Promote a corpus when:
+`<artifacts>/targets/<fuzzer>/base-corpus/` as additional seeds for the
+next run. Promote a corpus when:
 
 - It covers the features you care about.
-- You want future campaigns to start from that coverage (faster convergence,
-  regression guard for cherry-picked fixes).
+- You want future campaigns to start from that coverage (faster
+  convergence, regression guard for cherry-picked fixes).
 
-One promoted corpus snapshot per app is the preferred release shape. If the
-corpus carries a `.compat-key`, `app-campaign.sh` rejects it when the build
-key changes.
-
-## What `app-campaign.sh` expects
-
-Invoke the campaign from the SDK. The **campaign name** is the last
-positional argument (optional). It becomes the directory name under
-`<app>/.fuzz-artifacts/<name>/`. If you omit it, the script uses a UTC
-timestamp (`campaign-…`).
-
-```bash
-BOLOS_SDK=/path/to/ledger-secure-sdk \
-  "$BOLOS_SDK"/fuzzing/scripts/app-campaign.sh \
-  --app-dir /path/to/app my-campaign
-```
-
-Use an absolute `--app-dir` (or `export APP_DIR=…`) so behaviour does not depend
-on the shell’s current working directory.
-
-### CLI flags
-
-| Flag                   | Description                                                       |
-|------------------------|-------------------------------------------------------------------|
-| `--app-dir DIR`        | Path to the app root (required)                                   |
-| `--absolution-dir DIR` | Override Absolution resolution                                    |
-| `--fuzz-subdir DIR`    | Override the fuzzing subtree (default: `fuzzing`)                 |
-| `--target NAME`        | Restrict to one fuzzer (repeatable; multi-target manifest only)   |
-| `--clean`              | Delete build directories before configuring (full rebuild)        |
-
-### Environment variables
-
-| Variable               | Default | Meaning                                             |
-|------------------------|---------|-----------------------------------------------------|
-| `WARMUP_SEC`           | `30`    | Warmup duration **per worker** (seconds). Wide exploration from bootstrap seeds. |
-| `MAIN_SEC`             | `60`    | Main phase **per worker** (seconds). Deeper mutations from merged warmup corpus. |
-| `WORKERS`              | `min(2, nproc)` | LibFuzzer processes in parallel. Default caps at two for lighter local/CI use; set `WORKERS=8` (etc.) for long runs. On machines with one CPU, only one worker is started. Override the cap with `FUZZ_DEFAULT_WORKERS` (used only when `WORKERS` is unset). |
-| `EXTRA_CORPUS`         | unset   | **Colon-separated** list of corpus directories copied into the bootstrap corpus after generated seeds. Use to feed a **prior merged corpus** (e.g. `.fuzz-artifacts/old-run/targets/fuzz_globals/corpus`). If a directory contains `.compat-key`, it must match the current build; otherwise the script errors (prevents corrupt state / wrong prefix size). |
-| `BASE_CORPUS_DIR`      | `<app>/fuzzing/base-corpus` if that path exists | Additional promoted seeds (same compat-key rules when `.compat-key` is present). Set to empty to skip, e.g. when the checked-in corpus is stale: `BASE_CORPUS_DIR=`. |
-| `BUILD_JOBS`           | derived from CPU count | Parallel `cmake --build` jobs. Lower to reduce compile CPU spikes. |
-| `APP_TARGET`           | `flex`  | Device target for CMake (`flex`, `stax`, …).        |
-| `OVERWRITE`            | unset   | Set to `1` to replace an existing `.fuzz-artifacts/<run>/` tree. |
-| `SKIP_INVARIANT_SYNC`  | unset   | Skip `sync-invariant.py` (keep hand-tuned `.zon`)   |
-| `ABSOLUTION_DIR`       | unset   | Absolution install prefix (first lookup)            |
-| `BOLOS_SDK`            | parent of `fuzzing/` when unset | Must point at this SDK checkout for paths and CMake. |
-| `ARTIFACTS_ROOT`       | `<app>/.fuzz-artifacts` | Root directory for campaign output.          |
-| `BUILD_DIR_FAST` / `BUILD_DIR_COV` | `<app>/build/fast` and `build/cov` | Sanitizer fuzz binary vs coverage replay binary. |
-
-**Why tune these:** short defaults (`30`/`60` s, two workers) keep the first
-successful run fast. For meaningful coverage growth or regression hunting,
-increase `WARMUP_SEC`, `MAIN_SEC`, and `WORKERS` (e.g. `WARMUP_SEC=300
-MAIN_SEC=3300 WORKERS=4`). To cap machine load without editing the script,
-use `WORKERS=1` and/or lower `BUILD_JOBS`.
-
-### Absolution resolution
-
-Absolution is resolved in this order:
-
-1. `ABSOLUTION_DIR` environment variable.
-2. `--absolution-dir DIR` CLI flag.
-3. `${BOLOS_SDK}/fuzzing/absolution/` (bundled in the SDK, if any).
-4. `${BOLOS_SDK}/../absolution/` (sibling checkout).
-
-For CI images that pre-install Absolution system-wide, point
-`ABSOLUTION_DIR` at the install prefix. For workspace checkouts, the sibling
-fallback works as-is.
-
-### Campaign flow (single-target)
-
-1. Configure and build the fast binary.
-2. Sync the invariant (unless skipped).
-3. Configure and build the coverage binary.
-4. Update `scenario_layout.h`.
-5. Write the LibFuzzer dictionary from the manifest.
-6. Generate seeds.
-7. Copy `<app>/fuzzing/base-corpus/` if present.
-8. Add any `EXTRA_CORPUS`.
-9. Fuzz (warmup → main), merge corpus, replay, write coverage reports.
-
-### Campaign flow (multi-target)
-
-1. Configure CMake once for all targets.
-2. Build every target's fast binary.
-3. Sync invariants per target, rebuild.
-4. Configure and build every coverage binary.
-5. Per target: seed, warmup, main fuzz, corpus merge, replay.
-6. Merge all targets' profraw files.
-7. Generate one combined HTML coverage report
-   (`llvm-cov` with `--object` per binary).
-
-The `--target` flag selects a subset. Without it, every `[[targets]]` entry
-is fuzzed.
-
-### SDK self-fuzz invocation
-
-```bash
-"$BOLOS_SDK"/fuzzing/scripts/app-campaign.sh \
-  --app-dir "$BOLOS_SDK" \
-  --fuzz-subdir fuzzing/sdk-fuzz
-```
-
-## Invariant `.zon` files and `/app/...` paths
-
-Checked-in `invariants/fuzz_globals.zon` (and SDK `sdk-fuzz` models) contain
-`.source_file = "/app/..."` strings. Those paths are **Absolution metadata**
-(copied from the generated `build/<fast>/_absolution/<fuzzer>/fuzzer.c.zon` on
-the machine that last ran the pipeline). They are **included in Git** like any
-other generated-but-committed artefact.
-
-- **Fuzzing does not require** your checkout to live at `/app`. On a laptop,
-  the first **configure + build** produces a fresh `fuzzer.c.zon` whose
-  `.source_file` entries match **your** absolute paths.
-- **`sync-invariant.py`** (run by the campaign or manually below) rewrites
-  `fuzz_globals.zon` from that generated file. After a successful sync on your
-  machine, paths in `fuzz_globals.zon` match your tree (until someone commits a
-  different snapshot).
-- **`zero-symbols.txt`** selectors that use `@file.c` match when that substring
-  appears anywhere in the path, so `io_ext.c` still matches
-  `/home/you/.../io_ext.c`.
-
-Doc examples use `/path/to/ledger-secure-sdk` and `--app-dir`; only committed
-snapshots from the devcontainer often show `/app/...`.
-
-## Manual workflow (without `app-campaign.sh`)
-
-Use this when you only want to **configure**, **sync the invariant**, **refresh
-`scenario_layout.h`**, or **run LibFuzzer** without warmup/merge/coverage replay.
-Adjust `fuzz_globals` if your manifest defines another target name.
-
-**Environment (typical):**
-
-```bash
-export APP_DIR="/absolute/path/to/your-app"      # e.g. app-ethereum
-export BOLOS_SDK="/absolute/path/to/ledger-secure-sdk"
-export ABSOLUTION_DIR="/absolute/path/to/absolution"   # or rely on §Absolution resolution
-export APP_TARGET="${APP_TARGET:-flex}"
-SCRIPT_DIR="${BOLOS_SDK}/fuzzing/scripts"
-```
-
-**1. One shell with helpers loaded**
-
-```bash
-set -euo pipefail
-source "${SCRIPT_DIR}/app-common.sh"
-source "${SCRIPT_DIR}/app-config.sh"   # requires APP_DIR already set
-ensure_absolution
-```
-
-**2. Configure and build the sanitizer (“fast”) fuzzer**
-
-```bash
-BUILD_FAST="${APP_DIR}/build/fast"
-configure_fuzz_build "${APP_DIR}" "${BUILD_FAST}" RelWithDebInfo 0
-build_fuzzer_target "${BUILD_FAST}" fuzz_globals
-```
-
-**3. Sync `fuzz_globals.zon` and rebuild if the invariant changed**
-
-```bash
-INV="${APP_DIR}/fuzzing/invariants/fuzz_globals.zon"
-sync_invariant "${BUILD_FAST}" fuzz_globals "${INV}"
-if [[ "${INVARIANT_CHANGED:-0}" == 1 ]]; then
-  build_fuzzer_target "${BUILD_FAST}" fuzz_globals
-fi
-```
-
-To **force** a resync, delete `"${BUILD_FAST}/.fuzz-invariant-hash-fuzz_globals"`
-and run step 3 again.
-
-**4. Refresh `mock/scenario_layout.h`**
-
-```bash
-LAYOUT="${APP_DIR}/fuzzing/mock/scenario_layout.h"
-update_scenario_layout "${BUILD_FAST}" fuzz_globals "${LAYOUT}"
-```
-
-**5. Optional: coverage instrumented binary** (separate directory; used for
-`llvm-cov` replay, not for fast fuzzing)
-
-```bash
-BUILD_COV="${APP_DIR}/build/cov"
-configure_fuzz_build "${APP_DIR}" "${BUILD_COV}" RelWithDebInfo 1
-build_fuzzer_target "${BUILD_COV}" fuzz_globals
-```
-
-**6. Run LibFuzzer directly** (no dictionary / seeds unless you pass them)
-
-```bash
-mkdir -p /tmp/fuzz-corpus
-"${BUILD_FAST}/fuzz_globals" /tmp/fuzz-corpus \
-  -max_total_time=120 \
-  -timeout=2
-```
-
-Optional dictionary from the manifest:
-
-```bash
-DICT=/tmp/fuzz.dict
-python3 "${SCRIPT_DIR}/fuzz_manifest.py" --dict "${APP_DIR}/fuzzing/fuzz-manifest.toml" "${DICT}"
-# single-target; for multi-target add: --fuzzer fuzz_globals
-"${BUILD_FAST}/fuzz_globals" /tmp/fuzz-corpus -dict="${DICT}" -max_total_time=120
-```
-
-**7. Seeds** without the full campaign: each app’s `fuzzing/scripts/` may ship a
-generator (e.g. `generate-seed-corpus.py`); run it with `APP_DIR` and
-`BOLOS_SDK` set per that script’s help. The campaign wires the same generators
-automatically.
-
-Clang **19** (or the version picked by `pick_clang` in `app-common.sh`) and Ninja
-are expected; install paths match your OS.
-
-## Compatibility key
-
-Corpora are versioned by:
-
-```text
-sha256(prefix_size || sha256(fuzz_globals.zon) || fuzzer || harness_version)
-```
-
-If a promoted corpus carries a `.compat-key`, `app-campaign.sh` rejects it
-when it does not match the current build.
+One promoted corpus snapshot per app is the preferred release shape. If
+the corpus carries a `.compat-key`, `app-campaign.sh` rejects it when the
+build key changes.

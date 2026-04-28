@@ -1,10 +1,10 @@
 /*
  * Grammar-aware TLV custom mutator.
  *
- * Adapted from the original standalone mutator to work with the Absolution
- * pipeline: the top-level LLVMFuzzerCustomMutator lives in the harness and
- * handles the prefix/tail split. This file provides tlv_custom_mutate() which
- * operates on the tail region only.
+ * The top-level LLVMFuzzerCustomMutator in the harness handles the prefix /
+ * tail split; this file implements tlv_custom_mutate() which operates on the
+ * tail region only, using current_tlv_fuzz_config to drive structural
+ * mutations matching the active TLV grammar.
  */
 
 #include "tlv_mutator.h"

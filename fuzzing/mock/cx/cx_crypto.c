@@ -1,16 +1,14 @@
+/* Crypto and personalization mocks.
+ * fuzz_mock_crypto_fail toggles selected success and failure paths.
+ */
+
 #include <string.h>
 #include <stdint.h>
 
 #include "cx.h"
 #include "os.h"
 
-/*
- * Absolution-controlled mock toggle.
- *   0 → crypto operations succeed (CX_OK)
- *   nonzero → crypto operations fail (CX_INTERNAL_ERROR)
- * Apps enable dual-path coverage by adding a domain override:
- *   fuzz_mock_crypto_fail. = values \x00 \x01
- */
+/* Absolution discovers this BSS global; apps can override it in domain-overrides.txt. */
 uint8_t fuzz_mock_crypto_fail;
 
 bolos_err_t os_perso_get_master_key_identifier(uint8_t *identifier, size_t identifier_length)

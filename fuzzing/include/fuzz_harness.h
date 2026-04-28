@@ -1,56 +1,37 @@
 #pragma once
 /*
- * Generic fuzz harness for Absolution-based Ledger app fuzzers.
+ * Generic Absolution APDU harness.
  *
- * Provides fuzz_harness_entry() — a reusable fuzz_entry() body driven by an
- * app-provided command spec table and dispatch adapter.
+ * Provides fuzz_harness_entry(), the default body for the app's fuzz_entry():
+ * Absolution restores the invariant prefix, then this harness dispatches one
+ * APDU per iteration built from the fuzz tail.
  *
- * State-level model: Absolution controls global state via the prefix.  The
- * harness dispatches ONE APDU per iteration.  State-dependent checks (like
- * "was previous frame sent?") are bypassed because Absolution sets the
- * relevant globals directly in the invariant.
+ * Required app-provided symbols:
+ * - fuzz_commands[]
+ * - fuzz_n_commands
+ * - fuzz_app_reset()
+ * - fuzz_app_dispatch(void *cmd)
  *
- * Required extern symbols (app-provided):
- *
- *   fuzz_commands[]       - array of fuzz_command_spec_t
- *   fuzz_n_commands       - element count
- *   fuzz_app_reset()      - called before each input to reset app state
- *   fuzz_app_dispatch()   - called to dispatch a command_t into the real app
- *
- * The app must also #include its own command_t definition (from the SDK
- * parser.h or equivalent) before including this header.
+ * Required from the app's mocks.h before including this header:
+ * - try_context_t fuzz_exit_jump_ctx
+ * - uint8_t fuzz_ctrl[FUZZ_CTRL_SIZE]
+ * - const uint8_t *fuzz_tail_ptr
+ * - size_t fuzz_tail_len
+ * - FUZZ_CTRL_SIZE
  */
 
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
 #include <setjmp.h>
-
 #include "fuzz_defs.h"
+#include "mocks.h"
+#include "parser.h"
 
-/*
- * fuzz_command_spec_t and the FUZZ_CMD_* flags live in fuzz_defs.h so app
- * harnesses can declare lane-specific command tables before overriding the
- * FUZZ_PICK_COMMAND_* macros below.
- */
 extern const fuzz_command_spec_t fuzz_commands[];
 extern const size_t              fuzz_n_commands;
-
-extern void fuzz_app_reset(void);
-extern void fuzz_app_dispatch(void *cmd);
-
-/*
- * These symbols must already be declared by the app's mocks.h (included
- * before this header):
- *
- *   try_context_t fuzz_exit_jump_ctx
- *   uint8_t fuzz_ctrl[FUZZ_CTRL_SIZE]
- *   const uint8_t *fuzz_tail_ptr
- *   size_t fuzz_tail_len
- *   FUZZ_CTRL_SIZE  (macro)
- */
-
-/* ── Helpers ───────────────────────────────────────────────────────────────── */
+extern void                      fuzz_app_reset(void);
+extern void                      fuzz_app_dispatch(void *cmd);
 
 static inline int fuzz_use_structured_lane(void)
 {
@@ -65,25 +46,15 @@ static inline uint8_t fuzz_clamp_p(uint8_t raw, uint8_t p_max)
     return raw % (p_max + 1);
 }
 
-/* ── Lane-specific command selection hooks ────────────────────────────────── *
- *
- * Default behavior: structured lane picks via fuzz_ctrl[1], raw lane picks
- * via data[1], both modulo fuzz_n_commands.  Apps that need different
- * per-lane command distributions (e.g. Bitcoin's weighted raw/structured
- * maps) can override these macros before including this header.  Each
- * macro must expand to a `const fuzz_command_spec_t *`.
- */
+/* Apps may override these macros before including this header to install
+ * lane-specific command tables. */
 #ifndef FUZZ_PICK_COMMAND_STRUCTURED
-#define FUZZ_PICK_COMMAND_STRUCTURED(data, size) \
-    (&fuzz_commands[fuzz_ctrl[1] % fuzz_n_commands])
+#define FUZZ_PICK_COMMAND_STRUCTURED(data, size) (&fuzz_commands[fuzz_ctrl[1] % fuzz_n_commands])
 #endif
 
 #ifndef FUZZ_PICK_COMMAND_RAW
-#define FUZZ_PICK_COMMAND_RAW(data, size) \
-    (&fuzz_commands[(data)[1] % fuzz_n_commands])
+#define FUZZ_PICK_COMMAND_RAW(data, size) (&fuzz_commands[(data)[1] % fuzz_n_commands])
 #endif
-
-/* ── Single-APDU dispatch entry ────────────────────────────────────────────── */
 
 static int fuzz_harness_entry(const uint8_t *data, size_t size)
 {
