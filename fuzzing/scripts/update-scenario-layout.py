@@ -123,6 +123,17 @@ def main():
         default="fuzz_ctrl",
         help="Name of the control header global (default: fuzz_ctrl)",
     )
+    parser.add_argument(
+        "--allow-missing-ctrl",
+        action="store_true",
+        help=(
+            "Treat a missing ctrl global as expected: preserve the existing "
+            "SCEN_CTRL_OFF value in scenario_layout.h and print an info line "
+            "instead of a warning. Use this for apps whose harness does not "
+            "expose the ctrl region as an Absolution global (e.g. when the "
+            "ctrl bytes live inside the prefix at a fixed offset of 0)."
+        ),
+    )
     args = parser.parse_args()
 
     with open(args.fuzzer_c, "r", encoding="utf-8") as f:
@@ -150,6 +161,12 @@ def main():
     ctrl_off = offsets.get(args.ctrl_name)
     if ctrl_off is not None:
         replacements["SCEN_CTRL_OFF"] = ctrl_off
+    elif args.allow_missing_ctrl:
+        print(
+            f"info: {args.ctrl_name} not exported by Absolution; preserving "
+            f"existing SCEN_CTRL_OFF in {args.layout_h}",
+            file=sys.stderr,
+        )
     else:
         print(
             f"warning: could not find offset for {args.ctrl_name}",
